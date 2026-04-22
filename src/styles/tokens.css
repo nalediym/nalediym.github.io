@@ -1,0 +1,88 @@
+/*
+ * Naledi's design tokens.
+ * Dark-first, tinted neutrals, never pure black. Oklch throughout.
+ * Fraunces (display) + JetBrains Mono (UI/data). No AI-slop gradients.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ── Typography */
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-body: var(--font-display);
+
+  /* Fluid scale — clamp(min, preferred, max) */
+  --fs-xs: clamp(0.78rem, 0.76rem + 0.08vw, 0.84rem);
+  --fs-sm: clamp(0.88rem, 0.85rem + 0.14vw, 0.96rem);
+  --fs-md: clamp(1.0rem, 0.96rem + 0.2vw, 1.12rem);
+  --fs-lg: clamp(1.2rem, 1.12rem + 0.4vw, 1.4rem);
+  --fs-xl: clamp(1.5rem, 1.35rem + 0.8vw, 1.9rem);
+  --fs-2xl: clamp(2.0rem, 1.7rem + 1.5vw, 2.8rem);
+  --fs-3xl: clamp(2.8rem, 2.3rem + 2.5vw, 4.2rem);
+  --fs-hero: clamp(3.2rem, 2.6rem + 3.5vw, 5.6rem);
+
+  /* ── Colors (oklch — perceptually uniform, tinted toward brand hue) */
+  /* Background scale: the deepest is warm-neutral, never flat black. */
+  --bg-0: oklch(13.2% 0.012 85);
+  --bg-1: oklch(16.5% 0.014 85);
+  --bg-2: oklch(20.8% 0.016 85);
+  --bg-3: oklch(26.5% 0.018 85);
+
+  /* Foreground — warm cream, never pure white. */
+  --fg-0: oklch(96.8% 0.018 85);
+  --fg-1: oklch(88.5% 0.016 85);
+  --fg-2: oklch(72.2% 0.020 85);
+  --fg-3: oklch(58.4% 0.024 85);
+  --fg-4: oklch(42.6% 0.022 85);
+
+  /* Accent: burnt copper. Used sparingly — links, emphasis, underlines. */
+  --accent: oklch(72.5% 0.145 45);
+  --accent-dim: oklch(58.2% 0.120 45);
+  --accent-bg: oklch(22.4% 0.048 45);
+
+  /* Semantic */
+  --link: var(--accent);
+  --link-hover: var(--fg-0);
+  --border: oklch(28.5% 0.014 85 / 0.6);
+  --border-soft: oklch(24.0% 0.012 85 / 0.4);
+  --focus: oklch(72.5% 0.145 45 / 0.55);
+
+  /* ── Spacing (rem scale) */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4rem;
+  --sp-9: 6rem;
+  --sp-10: 9rem;
+
+  /* ── Layout */
+  --content-width: 62ch;
+  --wide-width: 72rem;
+
+  /* ── Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  /* ── Motion — ease-out quart/quint/expo. No bounce. */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 180ms;
+  --dur-med: 360ms;
+  --dur-slow: 640ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-med: 0ms;
+    --dur-slow: 0ms;
+  }
+}

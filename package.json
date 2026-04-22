@@ -1,0 +1,23 @@
+{
+  "name": "nalediym-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Naledi's portfolio + writing. Publishes to https://nalediym.github.io. Pim's owned-channel destination.",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^5.1.0",
+    "@astrojs/mdx": "^4.0.0",
+    "@astrojs/sitemap": "^3.2.0",
+    "@astrojs/rss": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}

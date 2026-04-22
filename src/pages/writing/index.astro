@@ -1,0 +1,89 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+
+const posts = (await getCollection('posts'))
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime());
+---
+
+<Base title="Writing — Naledi" description="Essays, launch posts, long-form notes.">
+  <section class="container writing-index">
+    <p class="eyebrow">writing</p>
+    <h1>Words that outlive the projects.</h1>
+    <ul class="post-list">
+      {posts.map((p) => (
+        <li>
+          <a href={`/writing/${p.id}/`}>
+            <span class="post-date mono">
+              {p.data.publishedAt.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </span>
+            <span class="post-title">{p.data.title}</span>
+            <span class="post-desc">{p.data.description}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <style>
+    .writing-index {
+      padding-top: var(--sp-6);
+      padding-bottom: var(--sp-8);
+    }
+    h1 {
+      max-width: 22ch;
+      margin-bottom: var(--sp-7);
+    }
+    .post-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .post-list li {
+      margin-bottom: var(--sp-5);
+      border-bottom: 1px solid var(--border-soft);
+      padding-bottom: var(--sp-5);
+    }
+    .post-list a {
+      display: grid;
+      grid-template-columns: 10rem 1fr;
+      gap: var(--sp-5);
+      text-decoration: none;
+      color: var(--fg-1);
+    }
+    .post-list a:hover .post-title {
+      color: var(--accent);
+    }
+    .post-date {
+      color: var(--fg-3);
+      font-size: var(--fs-xs);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding-top: 4px;
+    }
+    .post-title {
+      display: block;
+      font-family: var(--font-display);
+      font-size: var(--fs-xl);
+      color: var(--fg-0);
+      margin-bottom: var(--sp-2);
+      transition: color var(--dur-fast) var(--ease-out-quart);
+    }
+    .post-desc {
+      display: block;
+      color: var(--fg-2);
+      font-size: var(--fs-md);
+      max-width: 60ch;
+    }
+    @media (max-width: 520px) {
+      .post-list a {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</Base>

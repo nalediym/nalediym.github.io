@@ -1,0 +1,167 @@
+---
+import '../styles/base.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+}
+
+const { title, description, ogImage } = Astro.props;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="canonical" href={canonicalURL} />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+
+    {/* Open Graph */}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:url" content={canonicalURL} />
+    {ogImage && <meta property="og:image" content={new URL(ogImage, Astro.site)} />}
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="site-header container">
+      <a class="brand" href="/">
+        <span class="brand-name">Naledi</span>
+        <span class="brand-dot">·</span>
+        <span class="brand-tagline mono">systems &amp; software</span>
+      </a>
+      <nav aria-label="primary">
+        <a href="/projects/">Projects</a>
+        <a href="/writing/">Writing</a>
+        <a href="/about/">About</a>
+      </nav>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="site-footer container">
+      <div class="footer-cols">
+        <div>
+          <p class="mono eyebrow">elsewhere</p>
+          <ul class="plain-list">
+            <li><a href="https://github.com/nalediym" rel="me">github</a></li>
+            <li><a href="/rss.xml">rss</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="mono eyebrow">colophon</p>
+          <p class="footer-text">
+            Built with Astro. Fraunces + JetBrains Mono. Source on
+            <a href="https://github.com/nalediym/nalediym.github.io">github</a>.
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <style>
+      .site-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding-top: var(--sp-6);
+        padding-bottom: var(--sp-6);
+        gap: var(--sp-5);
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        text-decoration: none;
+        color: var(--fg-0);
+        display: inline-flex;
+        align-items: baseline;
+        gap: var(--sp-2);
+      }
+
+      .brand-name {
+        font-family: var(--font-display);
+        font-size: var(--fs-xl);
+        font-variation-settings: 'opsz' 144, 'SOFT' 40;
+        letter-spacing: -0.02em;
+      }
+
+      .brand-dot {
+        color: var(--fg-3);
+      }
+
+      .brand-tagline {
+        color: var(--fg-3);
+        font-size: var(--fs-xs);
+        letter-spacing: 0.08em;
+      }
+
+      nav {
+        display: flex;
+        gap: var(--sp-5);
+        font-family: var(--font-mono);
+        font-size: var(--fs-sm);
+      }
+
+      nav a {
+        color: var(--fg-2);
+        text-decoration: none;
+        padding-bottom: 2px;
+        border-bottom: 1px solid transparent;
+        transition: border-color var(--dur-fast) var(--ease-out-quart),
+          color var(--dur-fast) var(--ease-out-quart);
+      }
+
+      nav a:hover,
+      nav a:focus-visible {
+        color: var(--fg-0);
+        border-color: var(--accent);
+      }
+
+      .site-footer {
+        padding-top: var(--sp-9);
+        padding-bottom: var(--sp-7);
+        color: var(--fg-3);
+        border-top: 1px solid var(--border-soft);
+        margin-top: var(--sp-9);
+      }
+
+      .footer-cols {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: var(--sp-7);
+      }
+
+      @media (max-width: 520px) {
+        .footer-cols {
+          grid-template-columns: 1fr;
+          gap: var(--sp-5);
+        }
+      }
+
+      .plain-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-family: var(--font-mono);
+        font-size: var(--fs-sm);
+      }
+
+      .plain-list li {
+        margin-bottom: var(--sp-1);
+      }
+
+      .footer-text {
+        font-size: var(--fs-sm);
+        max-width: 42ch;
+      }
+    </style>
+  </body>
+</html>

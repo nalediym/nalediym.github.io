@@ -1,0 +1,57 @@
+---
+title: Hypha
+tagline: Reverse hyperbrowser — Person OS for your static exports. A local-first personal/org knowledge graph library, agent-navigable via MCP.
+status: alpha
+repo: https://github.com/nalediym/hypha
+release: https://github.com/nalediym/hypha/releases/tag/v0.1.0-alpha
+tags: [typescript, bun, sqlite, mcp, knowledge-graph, local-first, bitemporal]
+startedAt: 2026-04-22
+updatedAt: 2026-04-22
+featured: true
+order: 1
+---
+
+## What it does
+
+Hypha ingests static data exports — Gmail mbox archives, Google Drive folders (and soon Slack, Notion, Microsoft 365 exports) — into a **typed temporal graph** with full provenance. AI agents navigate inside it over MCP like a private website.
+
+The bet: **the archive is the source of truth because logins rot.** Kids leave school districts. Employees leave M365. Founders wind down SaaS. The exports outlive the accounts; Hypha makes them useful afterward.
+
+## How it works
+
+**Two primitives.** Every fact is a `Node` or `Edge` with an open `kind` string — `"gmail.message"`, `"identity.email"`, `"person"`. Adapters declare their kinds in a YAML manifest; core doesn't hardcode any type.
+
+**Bitemporal from day one.** Four timestamps on every record: `tx_created`, `tx_invalidated`, `valid_from`, `valid_to`. "Show me what I believed on date X about facts true on date Y" is a first-class query.
+
+**Inference is peer to ingestion.** Adapters emit ingested facts. Inferrers — identity resolution, DLP scanning, and soon community summaries — emit derived facts into the _same_ tables with `provenance: { kind: "inferred", confidence, inputs }`. Queries take `include_inferred` and `min_confidence`.
+
+**MCP-native.** Seven intent-shaped tools (`search`, `neighborhood`, `timeline`, `why`, `fetch`, `record`, `ask`) plus `hypha://node/{id}` resource templates. Works with Claude Desktop today.
+
+## What's shipped in v0.1.0-alpha
+
+- `@hypha/core` — two-primitive model, bitemporal quartet, Store interface, adapter + inferrer contracts.
+- `@hypha/store-sqlite` — SQLite + FTS5 + sqlite-vec implementation.
+- `@hypha/adapter-sdk` + `@hypha/inferrer-sdk` — plugin contracts with 6-assertion contract tests.
+- Two adapters: `gmail-mbox` (streaming mbox parser, content-addressed ids) and `google-drive-folder` (recursive directory walk).
+- Two inferrers: `identity-resolver` (three-stage cascade: block → Fellegi-Sunter score → WCC cluster) and `dlp-scanner` (regex patterns with Luhn + ABA validators).
+- `@hypha/mcp` — full MCP server with structured content + inline provenance.
+- `@hypha/governance` — audit log + policy engine stubs.
+- `@hypha/cli` — `hypha ingest | infer | search | serve | publish | export | import`.
+
+**27 passing tests. 1 skip (sqlite-vec). 0 fail.**
+
+## Explicit deferrals
+
+Honest scope. The following are v1.x:
+
+- More adapters: `google-takeout`, `slack-export`, `microsoft-365-export`, `notion-export`.
+- More inferrers: `community-summarizer` (GraphRAG-style), `memify` (usage salience).
+- Constellation UI (Next.js 16 port of my-ai-browser).
+- Streamable HTTP + OAuth 2.1 + PKCE, biometric DEK unlock, SQLCipher envelope mode.
+- `@hypha/store-postgres` implementation.
+
+## Credits
+
+Built on the shoulders of [Dogsheep](https://dogsheep.github.io) (philosophical north star), [Graphiti / Zep](https://github.com/getzep/graphiti) (bitemporal KG architecture), [Splink](https://moj-analytical-services.github.io/splink/) (Fellegi-Sunter ER), [Presidio](https://github.com/microsoft/presidio) (DLP patterns), [sqlite-vec](https://github.com/asg017/sqlite-vec), and [the MCP spec](https://modelcontextprotocol.io).
+
+Apache-2.0.

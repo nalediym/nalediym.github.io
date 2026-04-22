@@ -1,0 +1,191 @@
+---
+import Base from './Base.astro';
+
+interface PimScores {
+  market: number;
+  packaging: number;
+  network: number;
+  friction: number;
+  longevity: number;
+}
+
+interface Props {
+  title: string;
+  tagline: string;
+  status: 'concept' | 'alpha' | 'beta' | 'stable' | 'archived';
+  repo?: string;
+  website?: string;
+  release?: string;
+  tags?: string[];
+  startedAt: Date;
+  updatedAt?: Date;
+  pim?: { scores?: PimScores };
+}
+
+const {
+  title,
+  tagline,
+  status,
+  repo,
+  website,
+  release,
+  tags,
+  startedAt,
+  updatedAt,
+  pim,
+} = Astro.props;
+const formatDate = (d: Date) =>
+  d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+const scores = pim?.scores;
+const averageScore = scores
+  ? (scores.market + scores.packaging + scores.network + scores.friction + scores.longevity) / 5
+  : null;
+---
+
+<Base title={`${title} — Naledi`} description={tagline}>
+  <article class="container project">
+    <header>
+      <p class="eyebrow">
+        <a href="/projects/">projects</a>
+        <span class="sep">/</span>
+        <span data-status={status}>{status}</span>
+      </p>
+      <h1>{title}</h1>
+      <p class="project-tagline">{tagline}</p>
+
+      <div class="project-links mono">
+        {repo && <a href={repo}>repo</a>}
+        {website && <a href={website}>site</a>}
+        {release && <a href={release}>latest release</a>}
+      </div>
+    </header>
+
+    {scores && (
+      <aside class="pim-rubric">
+        <p class="mono eyebrow">pim rubric</p>
+        <dl>
+          <div><dt>market</dt><dd>{scores.market}</dd></div>
+          <div><dt>packaging</dt><dd>{scores.packaging}</dd></div>
+          <div><dt>network</dt><dd>{scores.network}</dd></div>
+          <div><dt>friction</dt><dd>{scores.friction}</dd></div>
+          <div><dt>longevity</dt><dd>{scores.longevity}</dd></div>
+          <div class="average"><dt>avg</dt><dd>{averageScore?.toFixed(1)}</dd></div>
+        </dl>
+      </aside>
+    )}
+
+    <div class="prose project-body">
+      <slot />
+    </div>
+
+    <footer class="project-footer mono">
+      <p>
+        started {formatDate(startedAt)}
+        {updatedAt && updatedAt.getTime() !== startedAt.getTime() && (
+          <>· updated {formatDate(updatedAt)}</>
+        )}
+        {tags && tags.length > 0 && <>· {tags.join(' · ')}</>}
+      </p>
+    </footer>
+  </article>
+
+  <style>
+    .project {
+      padding-top: var(--sp-6);
+      padding-bottom: var(--sp-7);
+    }
+    .project header {
+      margin-bottom: var(--sp-6);
+      max-width: var(--content-width);
+    }
+    .project h1 {
+      margin-top: var(--sp-2);
+    }
+    .eyebrow .sep {
+      margin: 0 var(--sp-2);
+      color: var(--fg-4);
+    }
+    .eyebrow [data-status='stable'] { color: var(--accent); }
+    .eyebrow [data-status='beta'] { color: var(--fg-1); }
+    .eyebrow [data-status='alpha'] { color: var(--fg-2); }
+    .eyebrow [data-status='concept'] { color: var(--fg-3); font-style: italic; }
+    .eyebrow [data-status='archived'] { color: var(--fg-3); text-decoration: line-through; }
+
+    .project-tagline {
+      font-size: var(--fs-lg);
+      color: var(--fg-2);
+      font-family: var(--font-display);
+      font-style: italic;
+      max-width: var(--content-width);
+      margin-top: var(--sp-3);
+    }
+    .project-links {
+      margin-top: var(--sp-5);
+      display: flex;
+      gap: var(--sp-4);
+      font-size: var(--fs-sm);
+    }
+    .project-links a {
+      color: var(--fg-2);
+      text-decoration: none;
+      border-bottom: 1px solid var(--accent-dim);
+      padding-bottom: 1px;
+    }
+    .project-links a:hover {
+      color: var(--fg-0);
+      border-color: var(--accent);
+    }
+
+    .pim-rubric {
+      margin: var(--sp-6) 0;
+      padding: var(--sp-5);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg-1);
+      max-width: 44rem;
+    }
+    .pim-rubric dl {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+      gap: var(--sp-4) var(--sp-5);
+      margin: 0;
+    }
+    .pim-rubric div {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-1);
+    }
+    .pim-rubric dt {
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--fg-3);
+      margin: 0;
+    }
+    .pim-rubric dd {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: var(--fs-2xl);
+      font-variation-settings: 'opsz' 72;
+      color: var(--fg-0);
+      line-height: 1;
+    }
+    .pim-rubric .average dd {
+      color: var(--accent);
+    }
+
+    .project-body {
+      font-size: var(--fs-md);
+    }
+    .project-footer {
+      margin-top: var(--sp-8);
+      padding-top: var(--sp-5);
+      border-top: 1px solid var(--border-soft);
+      color: var(--fg-3);
+      font-size: var(--fs-xs);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+  </style>
+</Base>

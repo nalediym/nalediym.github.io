@@ -1,0 +1,244 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+const projects = (await getCollection('projects'))
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 6);
+
+const posts = (await getCollection('posts'))
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime())
+  .slice(0, 4);
+---
+
+<Base
+  title="Naledi — systems & software"
+  description="Local-first tools, agent-navigable graphs, opinionated libraries. Portfolio + writing."
+>
+  <section class="hero container">
+    <p class="eyebrow">naledi kekana · systems &amp; software</p>
+    <h1 class="hero-title">
+      I build <em>local-first</em> tools that make your own data <em>useful</em> to the
+      agents you trust.
+    </h1>
+    <p class="hero-sub">
+      Libraries, agents, and experiments in the seam between personal data and AI.
+      Everything here is open-source or moving toward it.
+    </p>
+  </section>
+
+  <section class="grid container">
+    <h2 class="section-title">Projects</h2>
+    <ul class="project-list">
+      {projects.map((p) => (
+        <li class="project-card">
+          <a href={`/projects/${p.id}/`} class="project-link">
+            <div class="project-card-head">
+              <h3>{p.data.title}</h3>
+              <span class="mono status" data-status={p.data.status}>
+                {p.data.status}
+              </span>
+            </div>
+            <p>{p.data.tagline}</p>
+            <p class="project-tags mono">{p.data.tags.join(' · ')}</p>
+          </a>
+        </li>
+      ))}
+    </ul>
+    <p class="all-link mono">
+      <a href="/projects/">all projects →</a>
+    </p>
+  </section>
+
+  <section class="grid container">
+    <h2 class="section-title">Writing</h2>
+    <ul class="post-list">
+      {posts.map((p) => (
+        <li>
+          <a href={`/writing/${p.id}/`}>
+            <span class="post-date mono">
+              {p.data.publishedAt.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </span>
+            <span class="post-title">{p.data.title}</span>
+            <span class="post-desc">{p.data.description}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+    <p class="all-link mono">
+      <a href="/writing/">all writing →</a>
+    </p>
+  </section>
+
+  <style>
+    .hero {
+      padding-top: var(--sp-8);
+      padding-bottom: var(--sp-9);
+      max-width: 64rem;
+    }
+    .hero-title {
+      font-size: var(--fs-hero);
+      line-height: 1.05;
+      max-width: 22ch;
+      margin: var(--sp-4) 0 var(--sp-5);
+    }
+    .hero-title em {
+      font-style: italic;
+      color: var(--accent);
+      font-variation-settings: 'opsz' 144, 'SOFT' 60;
+    }
+    .hero-sub {
+      font-size: var(--fs-lg);
+      color: var(--fg-2);
+      max-width: 50ch;
+    }
+
+    .grid {
+      padding-bottom: var(--sp-8);
+    }
+    .section-title {
+      font-size: var(--fs-2xl);
+      margin-bottom: var(--sp-5);
+      padding-bottom: var(--sp-3);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .project-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+      gap: var(--sp-4);
+    }
+
+    .project-card {
+      margin: 0;
+    }
+
+    .project-link {
+      display: block;
+      padding: var(--sp-5);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg-1);
+      text-decoration: none;
+      color: var(--fg-1);
+      height: 100%;
+      transition: border-color var(--dur-med) var(--ease-out-quart),
+        background var(--dur-med) var(--ease-out-quart),
+        transform var(--dur-med) var(--ease-out-quart);
+    }
+
+    .project-link:hover {
+      border-color: var(--accent-dim);
+      background: var(--bg-2);
+      transform: translateY(-2px);
+    }
+
+    .project-card-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-2);
+    }
+
+    .project-card h3 {
+      margin: 0;
+      font-size: var(--fs-xl);
+      color: var(--fg-0);
+    }
+
+    .project-card p {
+      color: var(--fg-2);
+      margin: 0 0 var(--sp-3);
+      font-size: var(--fs-md);
+    }
+
+    .project-tags {
+      font-size: var(--fs-xs);
+      color: var(--fg-3);
+      letter-spacing: 0.04em;
+    }
+
+    .status {
+      font-size: var(--fs-xs);
+      color: var(--fg-3);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-2);
+    }
+    .status[data-status='stable'] { color: var(--accent); }
+    .status[data-status='beta'] { color: var(--fg-1); }
+    .status[data-status='alpha'] { color: var(--fg-2); }
+    .status[data-status='concept'] { color: var(--fg-3); font-style: italic; }
+
+    .post-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .post-list li {
+      margin-bottom: var(--sp-4);
+      border-bottom: 1px solid var(--border-soft);
+      padding-bottom: var(--sp-4);
+    }
+    .post-list a {
+      display: grid;
+      grid-template-columns: 8rem 1fr;
+      gap: var(--sp-4);
+      text-decoration: none;
+      color: var(--fg-1);
+    }
+    .post-list a:hover .post-title {
+      color: var(--accent);
+    }
+    .post-date {
+      color: var(--fg-3);
+      font-size: var(--fs-xs);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding-top: 2px;
+    }
+    .post-title {
+      display: block;
+      font-family: var(--font-display);
+      font-size: var(--fs-lg);
+      color: var(--fg-0);
+      margin-bottom: var(--sp-1);
+      transition: color var(--dur-fast) var(--ease-out-quart);
+    }
+    .post-desc {
+      display: block;
+      color: var(--fg-2);
+      font-size: var(--fs-sm);
+    }
+    @media (max-width: 520px) {
+      .post-list a {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .all-link {
+      margin-top: var(--sp-4);
+      color: var(--fg-3);
+      font-size: var(--fs-sm);
+    }
+    .all-link a {
+      color: var(--fg-2);
+      text-decoration: none;
+      border-bottom: 1px dashed var(--accent-dim);
+    }
+    .all-link a:hover {
+      color: var(--accent);
+    }
+  </style>
+</Base>

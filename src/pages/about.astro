@@ -1,0 +1,49 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="About — Naledi"
+  description="Engineer building local-first AI tools. Currently making data outlive the logins that produced it."
+>
+  <section class="container about">
+    <p class="eyebrow">about</p>
+    <h1>I build what should exist.</h1>
+
+    <div class="prose">
+      <p>
+        I'm Naledi. I write software — mostly libraries, occasionally agents, always
+        local-first when I can get away with it.
+      </p>
+
+      <p>
+        The through-line across my projects is <em>making your own data useful</em>.
+        Archives instead of APIs. Typed graphs instead of flat tables. Cited agent
+        output instead of hallucinated summaries.
+      </p>
+
+      <p>
+        I care about: personal data sovereignty, the seam between archives and
+        agents, bitemporal systems, and the kind of UI that a senior engineer would
+        stop scrolling for.
+      </p>
+
+      <h2>Elsewhere</h2>
+      <ul>
+        <li>GitHub: <a href="https://github.com/nalediym">nalediym</a></li>
+        <li>RSS: <a href="/rss.xml">/rss.xml</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <style>
+    .about {
+      padding-top: var(--sp-6);
+      padding-bottom: var(--sp-9);
+    }
+    .about h1 {
+      max-width: 20ch;
+      margin-bottom: var(--sp-7);
+    }
+  </style>
+</Base>

@@ -1,0 +1,109 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+---
+
+<Base title="Projects — Naledi" description="Libraries, agents, experiments.">
+  <section class="container projects-index">
+    <p class="eyebrow">projects</p>
+    <h1>Things I'm building or have shipped.</h1>
+    <ul class="project-list">
+      {projects.map((p) => (
+        <li>
+          <a href={`/projects/${p.id}/`}>
+            <div class="head">
+              <h2>{p.data.title}</h2>
+              <span class="status mono" data-status={p.data.status}>{p.data.status}</span>
+            </div>
+            <p class="tagline">{p.data.tagline}</p>
+            <p class="meta mono">
+              {p.data.tags.join(' · ')}
+              {p.data.pim?.scores && (
+                <>
+                  <span class="sep">·</span>
+                  <span>pim avg {
+                    (
+                      (p.data.pim.scores.market +
+                        p.data.pim.scores.packaging +
+                        p.data.pim.scores.network +
+                        p.data.pim.scores.friction +
+                        p.data.pim.scores.longevity) /
+                      5
+                    ).toFixed(1)
+                  }</span>
+                </>
+              )}
+            </p>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <style>
+    .projects-index {
+      padding-top: var(--sp-6);
+      padding-bottom: var(--sp-8);
+    }
+    h1 {
+      max-width: 22ch;
+      margin-bottom: var(--sp-7);
+    }
+    .project-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .project-list li {
+      margin-bottom: var(--sp-5);
+      border-bottom: 1px solid var(--border-soft);
+      padding-bottom: var(--sp-5);
+    }
+    .project-list a {
+      display: block;
+      text-decoration: none;
+      color: var(--fg-1);
+      padding: var(--sp-3) 0;
+    }
+    .head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--sp-4);
+      margin-bottom: var(--sp-2);
+    }
+    h2 {
+      margin: 0;
+      font-size: var(--fs-xl);
+      color: var(--fg-0);
+      transition: color var(--dur-fast) var(--ease-out-quart);
+    }
+    .project-list a:hover h2 {
+      color: var(--accent);
+    }
+    .tagline {
+      color: var(--fg-2);
+      margin: 0 0 var(--sp-2);
+      max-width: 60ch;
+    }
+    .meta {
+      color: var(--fg-3);
+      font-size: var(--fs-xs);
+      letter-spacing: 0.04em;
+      margin: 0;
+    }
+    .meta .sep { margin: 0 var(--sp-2); color: var(--fg-4); }
+    .status {
+      font-size: var(--fs-xs);
+      color: var(--fg-3);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-2);
+    }
+    .status[data-status='stable'] { color: var(--accent); }
+  </style>
+</Base>
