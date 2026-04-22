@@ -1,57 +1,73 @@
 ---
 title: Hypha
-tagline: Reverse hyperbrowser — Person OS for your static exports. A local-first personal/org knowledge graph library, agent-navigable via MCP.
+tagline: Reverse hyperbrowser — Person OS for your static exports.
 status: alpha
 repo: https://github.com/nalediym/hypha
 release: https://github.com/nalediym/hypha/releases/tag/v0.1.0-alpha
-tags: [typescript, bun, sqlite, mcp, knowledge-graph, local-first, bitemporal]
-startedAt: 2026-04-22
+tags: [mcp, local-first, knowledge-graph, personal-data, sqlite, bitemporal, typescript]
+startedAt: 2026-01-15
 updatedAt: 2026-04-22
 featured: true
-order: 1
+order: 2
+pim:
+  assessment_id: assess-20260422-001
+  verdict: READY
+  assessed_at: 2026-04-22
+  scores:
+    market: 9
+    packaging: 6
+    network: 8
+    friction: 4
+    longevity: 8
 ---
 
 ## What it does
 
-Hypha ingests static data exports — Gmail mbox archives, Google Drive folders (and soon Slack, Notion, Microsoft 365 exports) — into a **typed temporal graph** with full provenance. AI agents navigate inside it over MCP like a private website.
+Hypha ingests static data exports — Gmail mbox archives, Google Drive folders, and soon Slack, Notion, Microsoft 365 exports — into a **typed temporal graph** with full provenance. AI agents navigate inside it over MCP, like a private website only they can see.
 
-The bet: **the archive is the source of truth because logins rot.** Kids leave school districts. Employees leave M365. Founders wind down SaaS. The exports outlive the accounts; Hypha makes them useful afterward.
+Think of it as a **reverse hyperbrowser**. A hyperbrowser gives an agent a browser on the outward web. Hypha gives an agent a browser on your private archive.
+
+The bet: **the archive is the source of truth because logins rot.** Kids leave school districts. Employees leave M365 tenants. Founders wind down SaaS. Companies get acquired. The exports outlive the accounts. Hypha makes them useful afterward — Dogsheep for AI agents.
 
 ## How it works
 
-**Two primitives.** Every fact is a `Node` or `Edge` with an open `kind` string — `"gmail.message"`, `"identity.email"`, `"person"`. Adapters declare their kinds in a YAML manifest; core doesn't hardcode any type.
+**Two primitives.** Every fact is a `Node` or `Edge` with an **open `kind` string** — `"gmail.message"`, `"identity.email"`, `"person"`. Adapters declare their kinds in a YAML manifest; the core never hardcodes a type. New data shapes do not require a schema migration.
 
-**Bitemporal from day one.** Four timestamps on every record: `tx_created`, `tx_invalidated`, `valid_from`, `valid_to`. "Show me what I believed on date X about facts true on date Y" is a first-class query.
+**Bitemporal from day one.** Four timestamps on every record: `tx_created`, `tx_invalidated`, `valid_from`, `valid_to`. "Show me what I believed on date X about facts true on date Y" is a first-class query — required, not clever, when you're ingesting 2019 archives in 2026.
 
-**Inference is peer to ingestion.** Adapters emit ingested facts. Inferrers — identity resolution, DLP scanning, and soon community summaries — emit derived facts into the _same_ tables with `provenance: { kind: "inferred", confidence, inputs }`. Queries take `include_inferred` and `min_confidence`.
+**Provenance is an indexed column, not a side table.** Every record carries `kind: "ingested" | "inferred"`, adapter or inferrer name, confidence, and inputs. Every query takes `include_inferred` and `min_confidence`. The `why` tool walks the derivation tree back to ingested leaves.
 
-**MCP-native.** Seven intent-shaped tools (`search`, `neighborhood`, `timeline`, `why`, `fetch`, `record`, `ask`) plus `hypha://node/{id}` resource templates. Works with Claude Desktop today.
+**Inference is peer to ingestion.** The `identity-resolver` inferrer runs a **three-stage cascade**: multi-key union blocking (domain, local-part, name-tokens), Fellegi-Sunter-inspired additive scoring with Jaro-Winkler on display names, then weakly-connected-components clustering at ≥0.80. `dlp-scanner` applies SSN / email / phone / Luhn-validated credit card / IBAN patterns with an allowlist. Both write into the same tables as adapters, marked inferred.
 
-## What's shipped in v0.1.0-alpha
+**MCP-native surface.** Seven intent-shaped tools plus `hypha://node/{id}` resource templates. Works with Claude Desktop today.
+
+## What's shipped
+
+v0.1.0-alpha, Apache-2.0, publicly released 2026-04-22:
 
 - `@hypha/core` — two-primitive model, bitemporal quartet, Store interface, adapter + inferrer contracts.
-- `@hypha/store-sqlite` — SQLite + FTS5 + sqlite-vec implementation.
-- `@hypha/adapter-sdk` + `@hypha/inferrer-sdk` — plugin contracts with 6-assertion contract tests.
-- Two adapters: `gmail-mbox` (streaming mbox parser, content-addressed ids) and `google-drive-folder` (recursive directory walk).
-- Two inferrers: `identity-resolver` (three-stage cascade: block → Fellegi-Sunter score → WCC cluster) and `dlp-scanner` (regex patterns with Luhn + ABA validators).
-- `@hypha/mcp` — full MCP server with structured content + inline provenance.
-- `@hypha/governance` — audit log + policy engine stubs.
-- `@hypha/cli` — `hypha ingest | infer | search | serve | publish | export | import`.
+- `@hypha/store-sqlite` — SQLite + FTS5 + sqlite-vec.
+- `@hypha/adapter-sdk` + `@hypha/inferrer-sdk` — plugin contracts with contract tests.
+- Adapters: `gmail-mbox`, `google-drive-folder`.
+- Inferrers: `identity-resolver`, `dlp-scanner`.
+- `@hypha/mcp` — stdio MCP server with `search`, `neighborhood`, `timeline`, `why`, `fetch`, `record`, `ask`. Haiku compiles NL to StoreQuery when `ANTHROPIC_API_KEY` is set; FTS fallback otherwise.
+- `@hypha/publish` — read-only HTTP surface and Graphiti-compatible export/import.
+- `@hypha/governance` — Cedar policy engine + append-only audit log, scaffolded.
+- `@hypha/cli` — `hypha ingest | infer | search | serve | publish | export | import | build-adapter`.
 
 **27 passing tests. 1 skip (sqlite-vec). 0 fail.**
 
 ## Explicit deferrals
 
-Honest scope. The following are v1.x:
+Honest scope. These are not in alpha and I'm not pretending they are:
 
 - More adapters: `google-takeout`, `slack-export`, `microsoft-365-export`, `notion-export`.
 - More inferrers: `community-summarizer` (GraphRAG-style), `memify` (usage salience).
 - Constellation UI (Next.js 16 port of my-ai-browser).
-- Streamable HTTP + OAuth 2.1 + PKCE, biometric DEK unlock, SQLCipher envelope mode.
-- `@hypha/store-postgres` implementation.
+- Streamable HTTP + OAuth 2.1 + PKCE.
+- Biometric DEK unlock; SQLCipher envelope mode.
+- `@hypha/store-postgres` for the enterprise path.
 
 ## Credits
 
-Built on the shoulders of [Dogsheep](https://dogsheep.github.io) (philosophical north star), [Graphiti / Zep](https://github.com/getzep/graphiti) (bitemporal KG architecture), [Splink](https://moj-analytical-services.github.io/splink/) (Fellegi-Sunter ER), [Presidio](https://github.com/microsoft/presidio) (DLP patterns), [sqlite-vec](https://github.com/asg017/sqlite-vec), and [the MCP spec](https://modelcontextprotocol.io).
-
-Apache-2.0.
+Stands on shoulders: [Dogsheep](https://dogsheep.github.io) (philosophical north star, Simon Willison), [Graphiti / Zep](https://github.com/getzep/graphiti) (bitemporal KG architecture), [Splink](https://moj-analytical-services.github.io/splink/) (Fellegi-Sunter entity resolution), [Presidio](https://github.com/microsoft/presidio) (DLP patterns), [sqlite-vec](https://github.com/asg017/sqlite-vec), and [the MCP spec](https://modelcontextprotocol.io).
