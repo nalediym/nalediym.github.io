@@ -1,0 +1,38 @@
+---
+title: Linux Jr
+tagline: A real Linux terminal for kids — teaches pwd, ls, cd through missions, not lessons.
+status: beta
+repo: https://github.com/nalediym/linux-jr
+website: https://linux-jr.vercel.app
+tags: [education, terminal, react, pwa, cli, ink, pedagogy]
+startedAt: 2026-02-10
+updatedAt: 2026-04-22
+featured: true
+order: 3
+---
+
+## What it does
+
+A kid opens a URL and gets a terminal. Green text, blinking cursor, missions that feel like hacking. They type **real** Linux commands — `pwd`, `ls`, `cd`, `cat`, `mkdir`, `find`, `grep`, `base64 -d` — to find hidden files, decode messages, and help a cast of friends in a cozy tinker-workshop. Age 7+. Works on iPad Safari as a PWA. The same game ships as a real shell experience via `npx linuxjr`.
+
+Under the hood the filesystem is an in-memory JavaScript object with kid-friendly error messages. Nothing fails scary. Nothing uses jargon a 7-year-old wouldn't know.
+
+## Why not Scratch
+
+Most kid-coding tools teach through pretend languages — drag-and-drop blocks, fake robot DSLs. They teach logic. They don't build muscle memory for tools a professional actually uses. A kid who spends three years on Scratch still opens a real terminal at 12 and sees gibberish.
+
+Linux Jr flips that. Every command the kid types is the same command running on every server and Raspberry Pi on Earth. They graduate to a real shell and there's nothing to unlearn.
+
+## The interesting design choice
+
+There are two products in one app: a **Campaign** (story missions in order, ages 7+) and an **Arcade** (CTF mini-games in any order, ages 8+, adapted from [OverTheWire Bandit](https://overthewire.org/wargames/bandit/) and [picoCTF](https://picoctf.org)). Same engine, different surfaces. After an Arcade capture the kid gets a 😐 / 😊 / 🤩 rating prompt with an optional textarea — playtest feedback lands in `localStorage` for later review.
+
+The non-negotiables live in `SOUL.md` — a short document of rules that every PR is checked against: *the terminal IS the whole product*, *real Linux not pretend Linux*, *typing is mandatory*, *nothing fails scary*. One iteration tried to add modal cards for mission briefings. It violated rule #1. I walked it back and committed the rejection as a tombstone branch so future sessions don't re-propose the same mistake.
+
+CI runs ESLint, Vite build, `gitleaks`, and a custom `sloppy-guard.sh` that grows over time — every new class of sloppiness gets a check.
+
+## Credits
+
+Pedagogical shape from *Cyberchase* (PBS). Register from *Daniel Tiger*. Aesthetic direction on an early (rejected) extension from Kali Linux. CTF source material from Bandit and picoCTF. Tone inspiration originally from *Bluey*, since swapped out for an original cast.
+
+[Live demo](https://linux-jr.vercel.app) · [Source](https://github.com/nalediym/linux-jr) · [SOUL.md](https://github.com/nalediym/linux-jr/blob/main/SOUL.md)

@@ -1,0 +1,34 @@
+---
+title: Trellis
+tagline: IaC-configured AI platform for mission-driven education orgs — YAML manifests, DLP-aware, audited by design.
+status: alpha
+repo: https://github.com/nalediym/trellis
+website: https://trellis-nalediym.vercel.app
+tags: [ai-platform, iac, yaml, dlp, audit, nextjs, vercel-ai-sdk, education]
+startedAt: 2026-03-05
+updatedAt: 2026-04-20
+featured: false
+order: 4
+---
+
+## What it does
+
+Trellis is a sketch of what an AI control plane for a mission-driven education org actually looks like when you treat it as infrastructure. Every skill, permission, persona, PII rule, and data connector is a file in `platform/`. A change is a PR. A rollback is a `git revert`. The deployed app is the rendered state of the repo.
+
+Five skills are live: `parent-comms-attendance` (streaming agent with handbook retrieval), `lesson-plan-qa` (answer grounded in citations), `policy-handbook-summary`, `parent-contact-translate`, and `ops-ticket-triage` (classifier). Four personas — Teacher, Principal, Ops Analyst, Admin — each see a catalog filtered by what they're allowed to run. Three DLP rules run on both input and output. Every invocation is logged.
+
+## The interesting design choice
+
+**The manifests are the documentation.** There is no separate "what does this skill do" wiki. If you want to know which fields the `parent-comms-attendance` skill is allowed to pull from the student-information connector, you read `platform/connectors/*.yaml` — which names scoped fields and, just as importantly, explicit forbidden fields. If you want to know what counts as PII, you read `platform/dlp/*.yaml`. The Zod-validated manifests are loaded at startup; a malformed YAML file fails CI, not production.
+
+Every skill has a deterministic stub mode. Without `GOOGLE_GENERATIVE_AI_API_KEY` set, the full pipeline — policy → input DLP → retrieval → generation → output DLP → audit — still streams end-to-end, just with canned responses. A reviewer can clone the repo, run `npm run dev`, and see the shape without paying for a single token. A "stub mode" badge appears on the results panel so you always know which you're looking at.
+
+## Explicit deferrals
+
+No SSO. No database. No multi-tenant isolation. No cost tracking. In-memory state. This is a sketch of a control plane, not a production platform, and the README is clear about that. The point was to see whether "IaC for AI skills" felt good to live inside — writing a new skill as a YAML PR, rather than as a ticket for a platform team. It does.
+
+## Credits
+
+Stands on shoulders: [Vercel AI SDK](https://ai-sdk.dev) (v6 streaming + Gemini gateway), [Zod](https://zod.dev), [js-yaml](https://github.com/nodeca/js-yaml). The policy-as-code framing owes a debt to [Open Policy Agent](https://www.openpolicyagent.org) — though Trellis intentionally keeps the rule language dumb YAML, not Rego, because the target author is a PM, not a platform engineer.
+
+[Live](https://trellis-nalediym.vercel.app) · [Source](https://github.com/nalediym/trellis) · [PLATFORM.md](https://github.com/nalediym/trellis/blob/main/PLATFORM.md)
