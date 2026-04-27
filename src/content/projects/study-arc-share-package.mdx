@@ -1,0 +1,63 @@
+---
+title: Study Arc
+tagline: A 6-second vertical-video bumper template — retro anime study room, magical logo reveal, three formats from one source.
+status: stable
+repo: https://github.com/nalediym/study-arc-share-package
+website: https://nalediym.github.io/study-arc-share-package/
+tags: [hyperframes, gsap, animation, vertical-video, template]
+startedAt: 2026-04-22
+updatedAt: 2026-04-27
+featured: false
+order: 4
+pim:
+  assessment_id: mine-20260427-001
+  verdict: READY
+  assessed_at: 2026-04-27
+  scores:
+    market: 6
+    packaging: 7
+    network: 6
+    friction: 5
+    longevity: 6
+---
+
+## What it does
+
+Study Arc is a 1080x1920 vertical-video bumper, six seconds long, packaged as a remixable template. The scene: dreamy retro-anime study room, magical "STUDY ARC" wordmark reveal, soft subtitle line. Built on [HyperFrames](https://github.com/nalediym/hyperframes) so the same paused GSAP timeline can be (a) rendered to MP4 frame-by-frame, (b) autoplayed in a browser, and (c) exported as a single-file HTML for copy-paste sharing.
+
+For creators who want a title card without firing up After Effects.
+
+## How it works
+
+**Three publishing surfaces, one source of truth.** The motion lives in `index.html` (paused, deterministic, HyperFrames-renderable). `docs/index.html` mirrors it with browser-only autoplay. `share/gist/study-arc-single-file.html` is generated from `docs/` with all assets data-URI'd in, so the whole bumper fits in one file you can paste into a gist. **`AGENTS.md` is the contract** that keeps them in sync; a sync script enforces it.
+
+**Constraint-driven design.** `DESIGN.md` is half a positive style guide and half a "what NOT to do" list — no cyan, no elastic bounce, no white copy, no card stacks. The anti-pattern half is what makes the look recognizable.
+
+**Staggered GSAP timeline.** Six elements come in at 180–1020ms offsets (background, frame line, sparkles, logo halo, wordmark, subtitle). Nothing fires in parallel; the offsets are what make the reveal feel like *arrival* instead of *fade-in*.
+
+**Adversarial asset briefs.** `share/prompts.md` treats the AI image generator as adversarial — every "do" has a paired "do not," especially around the chroma-key background. Saved a lot of regenerations.
+
+## What's shipped
+
+- `index.html` — HyperFrames render source (paused timeline, deterministic).
+- `docs/index.html` — browser demo, autoplay, GitHub Pages-deployable.
+- `share/gist/study-arc-single-file.html` — single-file export, all assets inlined.
+- `assets/` — `bg.png`, `logo.png`, `sparkles.png` (AI-generated, chroma-keyed).
+- `renders/study-arc-final.mp4` — the rendered output, ready to upload.
+- `share/prompts.md` — the asset prompts (constraint-heavy).
+- `share/scripts/build_gist_single_file.py` — gist export builder.
+- `share/scripts/sync_docs_bundle.sh` — three-surface sync enforcer.
+- `AGENTS.md` + `DESIGN.md` + `share/publish-checklist.md` — the contract docs.
+
+Lints clean against `npx hyperframes lint`. Six seconds, three formats, one source.
+
+## Explicit deferrals
+
+- No alternate scenes — this is *one* bumper, not a kit of templates.
+- No build pipeline beyond the two scripts. If you want CI, add it.
+- The chroma-key removal happens upstream in image-gen tooling; the repo doesn't include a background-remover.
+- No license decision yet (see `share/publish-checklist.md` Optional Cleanup).
+
+## Credits
+
+Stands on [HyperFrames](https://github.com/nalediym/hyperframes) (renderer) and [GSAP](https://gsap.com) (timeline). The "adversarial prompt" framing borrows loosely from constraint-style briefs popularized by [Midjourney](https://www.midjourney.com)'s style-reference docs.

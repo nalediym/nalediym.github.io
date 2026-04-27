@@ -1,0 +1,101 @@
+---
+title: Three formats from one source — what I learned shipping a 6-second bumper
+description: A 1080x1920 HyperFrames vertical-video bumper, packaged as a render, a browser demo, and a single-file HTML gist. Five lessons from keeping them in sync.
+publishedAt: 2026-04-27
+tags: [hyperframes, gsap, animation, vertical-video, design-systems]
+pim:
+  source_project: study-arc-share-package
+  assessment_id: mine-20260427-001
+  generated_at: 2026-04-27
+---
+
+_How to ship the same 6-second render in three formats from one source — and the rules I wrote to keep them honest._
+
+## What it is
+
+Study Arc is a 1080x1920 vertical-video bumper, six seconds long. Retro anime study room, magical logo reveal, soft subtitle. It's a [HyperFrames](https://github.com/nalediym/hyperframes) scene: motion is a paused GSAP timeline, the renderer steps it frame by frame, and the same composition runs autoplay in a browser. Built it as a remixable template — swap the logo, swap the subtitle, ship your own bumper.
+
+## Try it
+
+```bash
+git clone https://github.com/nalediym/study-arc-share-package
+cd study-arc-share-package
+npx --yes hyperframes lint                      # validate the scene
+npx --yes hyperframes inspect --at 1.2,3,5.8    # preview frames
+```
+
+- **Live demo (autoplay):** [`nalediym.github.io/study-arc-share-package`](https://nalediym.github.io/study-arc-share-package/)
+- **Single-file HTML version:** open `share/gist/study-arc-single-file.html` in a browser. That's the whole bumper, no build step.
+- **Final MP4:** `renders/study-arc-final.mp4` in the repo.
+
+If you want to ship your own version: fork it, replace the logo and sparkles PNGs in `assets/`, rewrite the subtitle, run `python3 share/scripts/build_gist_single_file.py` to rebuild the gist, and `./share/scripts/sync_docs_bundle.sh` to sync the Pages bundle. Done.
+
+## What I learned
+
+### Three surfaces, one source of truth
+
+The same scene ships three ways:
+
+- `index.html` — paused, deterministic, HyperFrames-compatible. This is the render source.
+- `docs/index.html` — autoplaying, GitHub Pages-deployable, browser-only.
+- `share/gist/study-arc-single-file.html` — a one-file export with assets data-URI'd in. Copy, paste, share.
+
+`AGENTS.md` is the contract that keeps them honest: motion and timing start in the root file, the demo mirrors the root, the gist is generated from the demo. A `sync_docs_bundle.sh` script enforces it. The lesson isn't "support multiple formats" — it's that if you don't write the sync rules down, the formats drift in week two and you're maintaining three projects.
+
+### Half of DESIGN.md is what NOT to do
+
+The `DESIGN.md` for Study Arc has a `## What NOT to Do` section:
+
+> No cyan cyberpunk gradients or cold tech UI overlays.<br/>
+> No dense card stacks, HUD chrome, or extra badges.<br/>
+> No aggressive bounce or elastic motion on the title.<br/>
+> No pure white copy or flat black shadow treatment.
+
+This part of the doc ended up more useful than the positive style guide. Anti-patterns are how a look becomes recognizable. "Dreamy lofi" is vague; "no cyan, no bounce, no white" is enforceable. Constraints aren't restrictive — they're how you skip the boring middle of the design space.
+
+### Staggered easing, not parallel tween
+
+The reveal feels alive because nothing fires at the same time:
+
+```js
+const tl = gsap.timeline({ paused: true });
+
+tl.fromTo(".bg",        { scale: 1.02 }, { scale: 1.12, y: -44, ease: "sine.inOut" }, 0.18);
+tl.from  (".frame-line",                 { autoAlpha: 0, ease: "sine.out" },          0.22);
+tl.fromTo(".sparkles",  { autoAlpha: 0 }, { autoAlpha: 0.62, ease: "power1.inOut" }, 0.24);
+tl.from  (".logo-halo",                  { scale: 0.72, autoAlpha: 0 },               0.34);
+tl.from  (".logo-wrap",                  { y: 64, autoAlpha: 0, ease: "expo.out" },   0.42);
+tl.from  (".subtitle",                   { x: -34, autoAlpha: 0, ease: "power3.out" }, 1.02);
+```
+
+40-to-100-millisecond offsets. Nothing parallel. The eye reads it as **arrival**, not as "everything fades in at once." It's a small thing. It's also the difference between "clean" and "alive."
+
+### Asset briefs treat AI generators as adversarial
+
+The repo's `share/prompts.md` has the prompts I used to generate the logo and sparkles. The interesting parts aren't the descriptions — they're the constraints:
+
+> Constraints: exact spelling STUDY ARC, single logo only, background must be one
+> uniform flat #00ff00 with no shadows gradients texture or reflections, keep sharp
+> clean edges, **do not use #00ff00 in the logo**.
+
+That last clause is the lesson. The chroma-key background needs to be a known color so background removal can be lossless. AI art generators will happily leak the chroma key into the foreground if you don't say not to. So every generation rule has a paired "do not" rule. The prompt template treats the model as an adversary that will technically fulfil the brief while quietly breaking your pipeline. It saved me about ten regenerations.
+
+### Drop-shadow on the asset, not box-shadow on the container
+
+```css
+.logo {
+  filter: drop-shadow(0 30px 60px rgba(23, 16, 42, 0.56));
+}
+```
+
+The logo PNG is transparent — chroma-keyed out. A `box-shadow` would have drawn a shadow around the *bounding box*, including the empty padding around the wordmark. `filter: drop-shadow` follows the actual silhouette of the letters. This only matters when your asset is shape-cut, but when it is, the box-shadow version looks immediately wrong — like the logo is sitting on a card you can't see. I lost twenty minutes to this before I noticed.
+
+## What this isn't
+
+- Not a video editor or motion-design tool. One bumper, packaged as a template.
+- Not a HyperFrames tutorial. Read the [HyperFrames docs](https://github.com/nalediym/hyperframes) for that.
+- Not a polished design system. The constraints in `DESIGN.md` are for *this scene*; they aren't a brand.
+
+## Credits
+
+Built on [HyperFrames](https://github.com/nalediym/hyperframes) and [GSAP](https://gsap.com). Prompt-template approach borrowed loosely from [Midjourney](https://www.midjourney.com)'s constraint-style briefs. Inspired by every lofi study-stream that's ever played in a tab while I was supposed to be working.
