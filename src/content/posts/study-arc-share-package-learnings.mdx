@@ -15,9 +15,23 @@ _How to ship the same 6-second render in three formats from one source — and t
 
 Study Arc is a 1080x1920 vertical-video bumper, six seconds long. Retro anime study room, magical logo reveal, soft subtitle. It's a [HyperFrames](https://github.com/nalediym/hyperframes) scene: motion is a paused GSAP timeline, the renderer steps it frame by frame, and the same composition runs autoplay in a browser. Built it as a remixable template — swap the logo, swap the subtitle, ship your own bumper.
 
-> **Bumper, n.** A short branded video clip — usually 3–10 seconds — that plays at the start or end of longer content. A title card, a sign-off, a visual signature. YouTubers and streamers use them between segments; brands use them as pre-rolls.
+> **Bumper, n.** A short branded video clip — usually 3–10 seconds — that plays at the start or end of longer content. A title card, a sign-off, a visual signature. YouTubers and streamers use them between segments; brands use them as [pre-rolls](https://en.wikipedia.org/wiki/Pre-roll_advertisement).
 >
-> A **bumper template** is the reusable version: motion, layout, and timing are pre-built, but the logo and subtitle copy are swappable. Think "Premiere Pro template" but as a tiny code repo instead of an `.aep` file. You clone it, drop in your own logo, rewrite one line of text, re-render. Now it's yours.
+> A **bumper template** is the reusable version: motion, layout, and timing are pre-built, but the logo and subtitle copy are swappable. Think "[Premiere Pro template](https://www.adobe.com/products/premiere/templates.html)" but as a tiny code repo instead of an [`.aep`](https://helpx.adobe.com/after-effects/using/projects.html) file (After Effects' project-file format — proprietary, requires the Adobe app to open). You clone it, drop in your own logo, rewrite one line of text, re-render. Now it's yours.
+
+### Reference files in this repo
+
+Each lesson below cites a file. Here's the index, in case you want to skim the source first:
+
+- [`AGENTS.md`](https://github.com/nalediym/study-arc-share-package/blob/main/AGENTS.md) — the three-surface contract. Where the sync rules live.
+- [`DESIGN.md`](https://github.com/nalediym/study-arc-share-package/blob/main/DESIGN.md) — colors, typography, motion, and the anti-pattern list.
+- [`index.html`](https://github.com/nalediym/study-arc-share-package/blob/main/index.html) — the [HyperFrames](https://github.com/nalediym/hyperframes) scene with the [GSAP](https://gsap.com/docs/v3/GSAP/Timeline) timeline (lines 187–213 are the staggered reveal).
+- [`docs/index.html`](https://github.com/nalediym/study-arc-share-package/blob/main/docs/index.html) — the autoplay browser version, served via [GitHub Pages](https://docs.github.com/en/pages).
+- [`share/prompts.md`](https://github.com/nalediym/study-arc-share-package/blob/main/share/prompts.md) — the AI image-prompt template with the chroma-key guardrails.
+- [`share/scripts/build_gist_single_file.py`](https://github.com/nalediym/study-arc-share-package/blob/main/share/scripts/build_gist_single_file.py) — turns the demo into a single self-contained HTML file using [data URIs](https://developer.mozilla.org/en-US/docs/Web/URI/Schemes/data).
+- [`share/scripts/sync_docs_bundle.sh`](https://github.com/nalediym/study-arc-share-package/blob/main/share/scripts/sync_docs_bundle.sh) — the sync enforcer that keeps all three surfaces in lockstep.
+- [`share/publish-checklist.md`](https://github.com/nalediym/study-arc-share-package/blob/main/share/publish-checklist.md) — the actual ship checklist I run before posting.
+- [`renders/study-arc-final.mp4`](https://github.com/nalediym/study-arc-share-package/blob/main/renders/study-arc-final.mp4) — the rendered output.
 
 ## Try it
 
@@ -100,6 +114,18 @@ The logo PNG is transparent — chroma-keyed out. A `box-shadow` would have draw
 - Not a HyperFrames tutorial. Read the [HyperFrames docs](https://github.com/nalediym/hyperframes) for that.
 - Not a polished design system. The constraints in `DESIGN.md` are for *this scene*; they aren't a brand.
 
+## Further reading
+
+If any of these lessons sparked something, here's where to go deeper:
+
+- **HyperFrames render model** — [github.com/nalediym/hyperframes](https://github.com/nalediym/hyperframes). The "paused timeline + frame-by-frame stepper" idea I built on top of.
+- **GSAP timelines** — [gsap.com/docs/v3/GSAP/Timeline](https://gsap.com/docs/v3/GSAP/Timeline) and the legendary [easing visualizer](https://gsap.com/docs/v3/Eases/). The `position` parameter is what makes the staggered reveal possible.
+- **Chroma keying** — [Wikipedia: Chroma key](https://en.wikipedia.org/wiki/Chroma_key) for the why, [remove.bg](https://www.remove.bg) and [rembg](https://github.com/danielgatis/rembg) for the how.
+- **CSS `filter` vs `box-shadow`** — [MDN: filter: drop-shadow()](https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/drop-shadow) explains why drop-shadow follows the alpha channel and box-shadow doesn't.
+- **Data-URI embedding** — [MDN: Data URIs](https://developer.mozilla.org/en-US/docs/Web/URI/Schemes/data). The trick that makes the single-file gist export possible.
+- **Adversarial prompting for image gen** — [Midjourney's `--no` parameter](https://docs.midjourney.com/docs/parameter-list#no) is the canonical "do not" rule. Same idea, simpler tool.
+- **Vertical video specs across platforms** — [Buffer's vertical video size guide](https://buffer.com/library/ideal-image-sizes-social-media-posts/) — 1080×1920 is the safe denominator for Reels, Shorts, TikTok, and X video.
+
 ## Credits
 
-Built on [HyperFrames](https://github.com/nalediym/hyperframes) and [GSAP](https://gsap.com). Prompt-template approach borrowed loosely from [Midjourney](https://www.midjourney.com)'s constraint-style briefs. Inspired by every lofi study-stream that's ever played in a tab while I was supposed to be working.
+Built on [HyperFrames](https://github.com/nalediym/hyperframes) and [GSAP](https://gsap.com). Background-removal trick borrowed from the chroma-key workflow used in green-screen video. Prompt-template approach inspired by [Midjourney](https://www.midjourney.com)'s constraint-style briefs and [Anthropic's prompt-engineering guide](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview). Inspired by every lofi study-stream that's ever played in a tab while I was supposed to be working — special nod to the [`lofi girl`](https://www.youtube.com/@LofiGirl) and [`Chillhop Music`](https://www.youtube.com/@ChillhopMusic) live channels for the aesthetic vocabulary.
