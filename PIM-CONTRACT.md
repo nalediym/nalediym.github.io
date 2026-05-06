@@ -48,7 +48,7 @@ pim:                                   # optional. Provenance block.
 ```mdx
 ---
 title: Dogsheep for AI agents
-description: A reverse hyperbrowser for your static exports.
+description: A local-first knowledge graph for your static exports.
 publishedAt: 2026-04-22
 tags: [hypha, local-first, agents, mcp]
 pim:
@@ -119,7 +119,7 @@ public audit trail — they render as a card at the top of the project page.
 ```mdx
 ---
 title: Hypha
-tagline: Reverse hyperbrowser — Person OS for your static exports.
+tagline: Person OS for your static exports.
 status: alpha
 repo: https://github.com/nalediym/hypha
 release: https://github.com/nalediym/hypha/releases/tag/v0.1.0-alpha
