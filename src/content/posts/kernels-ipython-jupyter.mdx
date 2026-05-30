@@ -1,0 +1,172 @@
+---
+title: "Kernel, IPython, Jupyter: feel the difference"
+description: "Three words that get conflated constantly. I built a playground that boots a real kernel, sniffs the raw ZeroMQ frames, writes a custom magic, and swaps Python for Bash under the same UI — so you can feel where one ends and the next begins."
+publishedAt: 2026-05-29
+tags: [jupyter, ipython, kernels, zeromq, notebooks, learning]
+---
+
+_The UI never runs your code. Once you see that, the whole stack snaps into place._
+
+Three things get used as if they were one:
+
+- **Kernel** — the **process** that runs your code and holds its state.
+- **IPython** — the **enhanced REPL** that the default kernel wraps.
+- **Jupyter** — the **front-end** that talks to a kernel over **ZeroMQ**.
+
+I didn't want to read that table and nod. I wanted to *feel* the seams. So I built
+[`kernels-ipython-jupyter`](https://github.com/nalediym/kernels-ipython-jupyter):
+a playground that drives each layer until the boundary between them is obvious.
+
+Here's the model the whole thing is built to make concrete:
+
+```
+┌─────────────┐   signed JSON over    ┌──────────────────────────┐
+│   JUPYTER    │  5 ZeroMQ sockets     │         KERNEL            │
+│  (the UI)    │ ───────────────────►  │   a separate process     │
+│              │   execute_request     │   running IPython        │
+│  notebook /  │ ◄───────────────────  │   ── holds your state ── │
+│  JupyterLab  │  stream / result /    │   x = 42 lives HERE       │
+│              │  status (idle/busy)   │                          │
+└─────────────┘                        └──────────────────────────┘
+```
+
+The front-end serializes "please run this" into a signed JSON message, pushes it
+over a socket, and renders whatever streams back. **It never executes anything.**
+Swap the process on the right, and the same UI drives a different language.
+
+## 1. Bare `python3` vs IPython — same bytes, different world
+
+Feed the *identical* snippet to both interpreters:
+
+```python
+2 + 2
+_ * 10
+import math
+math.sqrt(-1)
+```
+
+Bare `python3` runs it as a script — it echoes nothing, has no `_`, and dies on line two:
+
+```text
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+NameError: name '_' is not defined
+```
+
+IPython echoes every `Out`, remembers `_`, numbers your history, and colors the traceback:
+
+```text
+In [1]: Out[1]: 4
+In [2]: Out[2]: 40
+In [4]: ValueError: expected a nonnegative input, got -1.0
+        ----> 1 math.sqrt(-1)
+```
+
+Jupyter's default kernel *is* IPython. Everything that makes a notebook feel alive —
+echo, `_`, `In`/`Out`, rich tracebacks — comes from this layer. Not from Python,
+not from the browser.
+
+## 2. State lives in the kernel, not the cells
+
+Cells aren't isolated scripts. They run in the **same process**, so a name from one
+cell is alive in the next:
+
+```python
+secret = 6 * 7     # cell 1 — no output
+secret * 2         # cell 2 — still alive → 84
+```
+
+That persistence *is* the kernel. Restart the kernel and `secret` is gone — the file
+on disk never held it; the process did.
+
+## 3. Watch the raw ZeroMQ frames
+
+This is the part most tutorials hand-wave. A small script boots a real kernel,
+attaches its **own** zmq sockets to the kernel's Shell and IOPub ports, and prints
+the multipart frames byte-for-byte while running `x = 6 * 7; print(...); x`.
+
+A single `execute_request` blooms into the full reply lifecycle:
+
+```text
+┌─ IOPUB ── 7 frames (delimiter <IDS|MSG> at position 1)
+  [0]   50B  kernel.<id>.status
+  [1]    9B  <IDS|MSG>                ← delimiter (routing ends here)
+  [2]   64B  69d721…0acb0a3d          ← HMAC signature (64 hex chars)
+  [3]  203B  {"msg_type":"status"…}   ← header
+  [4]    2B  {}                       ← parent_header
+  [5]    2B  {}                       ← metadata
+  [6]   27B  {"execution_state":"busy"}   ← content
+
+…  execute_input  →  stream/stdout "the answer is 42"  →  execute_result {"text/plain":"42"}
+   SHELL execute_reply {"status":"ok"}  →  IOPUB status {"execution_state":"idle"}
+```
+
+Every frame carries the literal `<IDS|MSG>` delimiter, an **HMAC signature** (the
+kernel refuses unsigned messages), a header, a **parent_header** linking each reply
+back to your request, and the content. That sequence —
+`status:busy → execute_input → stream → execute_result → execute_reply → status:idle` —
+is *exactly* what JupyterLab exchanges with the kernel on every Shift+Enter.
+
+## 4. Magics are just functions you can write
+
+A magic is a command IPython intercepts before the line reaches Python. They're not
+built in — they're registered functions. So I wrote two:
+
+```python
+@line_magic
+def clap(self, line):
+    return " 👏 ".join(line.split())
+
+@cell_magic
+def shout(self, line, cell):
+    print(cell.upper().rstrip())
+```
+
+```text
+>>> %clap kernels hold state
+Out[0]: 'kernels 👏 hold 👏 state'
+
+>>> %%shout / state persists across cells
+STATE PERSISTS ACROSS CELLS
+```
+
+The demo drives them through `InteractiveShell.run_cell` — which is precisely what a
+kernel does with each cell. No notebook required to prove the magic is real.
+
+## 5. The kernel is swappable — Python ↔ Bash, same UI
+
+One client function, two kernels, changing only the `kernel_name`:
+
+```text
+===== kernel = 'python3' =====
+  got  : 'python kernel: 3.14.4\n1024'
+
+===== kernel = 'bash' =====
+  got  : 'bash kernel: GNU bash, version 5.2.37 …\n2^10 = 1024'
+```
+
+Same protocol, same client code, two languages. The "kernel" is a pluggable
+back-end — Python, Bash, R, Julia, Deno. Swap the kernel, keep the notebook. This is
+the single fact that makes the whole architecture click.
+
+## The confusion worth internalizing: which Python is my kernel?
+
+A kernel is a **process**, launched with **one specific interpreter**, and it keeps
+that interpreter for its whole life.
+
+- `sys.executable` (inside a cell) is the truth: the interpreter the kernel runs.
+- `!which python3` (inside a cell) is the *shell's* `PATH` — often a different Python.
+- Activating a venv in your terminal does **not** move an already-running kernel.
+
+If imports work in your terminal but fail in the notebook, you're pointed at a
+different interpreter. Check `sys.executable` first, every time.
+
+## See it executed
+
+The annotated notebook — pre-run, every output real — is published as a static page:
+
+**→ [Open the executed playground notebook](/kernels-ipython-jupyter/notebook.html)**
+
+Or clone [the repo](https://github.com/nalediym/kernels-ipython-jupyter) and run the
+five demos yourself. The whole point is that none of it is a diagram — it's a live
+process you can poke.
