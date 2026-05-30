@@ -1,0 +1,120 @@
+---
+title: The tmux we already had
+description: I was about to install a whole orchestration framework to automate interactive Claude Code tests. Turns out my terminal emulator had been a test harness the whole time.
+publishedAt: 2026-04-23
+tags: [claude-code, kitty, terminal, tui, agent-native-dev, mcp, automation]
+cover: /img/the-tmux-we-already-had/primitives-test-final.png
+pim:
+  source_project: devops-for-skill-building
+  assessment_id: assess-20260423-002
+  generated_at: 2026-04-23
+---
+
+_On the day I learned my terminal was already a test harness._
+
+I'm writing a design memo called _DevOps for Agent-Stack Building_ — a GitOps-shaped pattern for iterating an MCP server in-place while the session that uses it is still flying. The memo's §8 names its next deliverable: a PRD for a skill called `audit-mcp-server`. That PRD, now drafted, identifies three residual interactive tests that C.2's headless sweep couldn't answer — things like _"does `/mcp reconnect` re-read the mutated config, or use startup-cached argv?"_ The questions are small. The test subject is Claude Code's TUI, and Claude Code's `-p/--print` mode explicitly disables that TUI. So automation looked expensive.
+
+## The SOTA I almost adopted
+
+I went looking for the 2026-correct way to drive an interactive Claude Code session from a script, and the answer was loud: **tmux**. The ecosystem is mature — [`claude-tmux-orchestration`](https://github.com/primeline-ai/claude-tmux-orchestration), [`pmux`](https://gist.github.com/GGPrompts/800f2c67d96bceab836c0090b71488ef), [`smux`](https://github.com/ShawnPana/smux), [`claude-yolo`](https://github.com/claude-yolo/claude-yolo). The pattern is the same across all of them: spawn Claude Code in a tmux pane, `send-keys -l` to type slash commands, `capture-pane -p` to scrape output. Best practice: literal mode, separate `Enter`, watch for prompts. It's well-blazed territory.
+
+I was about to follow the ecosystem when I noticed what my shell was already telling me: `KITTY_LISTEN_ON=unix:/tmp/kitty.sock-1184`.
+
+## The pivot
+
+Kitty ships remote control. It's been stable for years. Every shell a Kitty window launches inherits `KITTY_LISTEN_ON`, which is a Unix socket for the `kitty @` command. And `kitty @` does all the things tmux does:
+
+| tmux | kitty |
+|---|---|
+| `tmux new-window` | `kitty @ launch --type=window` |
+| `send-keys -l "text"` | `kitty @ send-text --match id:N "text"` |
+| `capture-pane -p` | `kitty @ get-text --match id:N --extent={screen,all}` |
+| `kill-window` | `kitty @ close-window --match id:N` |
+| `list-panes` | `kitty @ ls` (returns JSON) |
+
+The tmux-based orchestration ecosystem exists because tmux is the lowest-common-denominator: headless-capable, SSH-friendly, scriptable anywhere bash runs. All true. But I wasn't writing a distributed agent mesh. I was writing a harness for interactive tests on one laptop, with one terminal, already running. For that case, the surface-area-equivalent tool I already had was strictly better than the one I'd have to set up.
+
+## The harness
+
+Five primitives, ~60 lines of bash:
+
+```bash
+drive_preflight() { kitty @ ls >/dev/null 2>&1; }
+
+drive_spawn() {  # echoes the new window id
+  local title="$1" cwd="$2"; shift 2
+  kitty @ launch --type=window --title="$title" --cwd="$cwd" --keep-focus --copy-env "$@"
+}
+
+drive_send_line() {
+  kitty @ send-text --match "id:$1" "$2"$'\r'
+}
+
+drive_capture() {
+  kitty @ get-text --match "id:$1" --extent="${2:-screen}"
+}
+
+drive_wait_for() {  # poll capture until regex matches, or timeout
+  local wid="$1" regex="$2" timeout="${3:-10}"
+  local deadline=$(( SECONDS + timeout ))
+  while (( SECONDS < deadline )); do
+    drive_capture "$wid" | grep -qE "$regex" && return 0
+    sleep 0.3
+  done
+  return 1
+}
+
+drive_close() {
+  kitty @ close-window --match "id:$1" --ignore-no-match --no-response 2>/dev/null
+}
+```
+
+That's the whole library. Everything the three W3 tests need, plus a trap-able window handle so parallel tests don't stomp each other.
+
+## The verification loop that surprised me
+
+I didn't want to spend Anthropic credits verifying the harness itself, so the first test drives a `bash --norc -i` subprocess instead of Claude Code. Spawn it, wait for `\$`, send `echo HARNESS_TEST_OK_$$`, capture, grep for the marker. Also exercised `--extent=all` against a scrollback-overflowing loop to confirm off-screen lines are reachable. All five primitives green, **zero credits spent.**
+
+![test-primitives.sh running — bash subprocess driven by the Kitty harness, all five primitives passing with a unique-per-run marker round-trip, zero Anthropic credits consumed](/img/the-tmux-we-already-had/primitives-test.gif)
+
+The second surprise came when I wrote the argv-logging probe for the actual test. `.mcp.json` can point `command` at any executable, so I wrote `probe-server.sh` — a three-line stub that appends `<timestamp> pid=$$ ppid=$PPID argv=$0 $*` to `/tmp/b1-probe.log` before `exec cat`. The question W3a asks is: _when `/mcp reconnect` fires, does Claude Code re-read the mutated args or use startup-cached ones?_ The probe answers it mechanically — by comparing `--label=` values across log lines.
+
+Before firing the interactive test at all, I ran `claude mcp list` three times against the reset config. The probe log:
+
+```
+1776924663 pid=50316 ppid=50282 argv=.../probe-server.sh --label=ORIGINAL
+1776924699 pid=50724 ppid=50697 argv=.../probe-server.sh --label=ORIGINAL
+1776924701 pid=50783 ppid=50756 argv=.../probe-server.sh --label=ORIGINAL
+```
+
+Three invocations, three distinct PIDs, exact args. The measurement instrument was validated before I'd spent a cent on the actual test. The interactive question still required the Kitty harness — `/mcp reconnect` only exists inside the TUI — but every piece of the plumbing was proven first.
+
+## What I'd still use tmux for
+
+Honest scope, because the tmux ecosystem earns its keep:
+
+- **Headless CI.** Kitty is GUI-bound. If these tests ever become a regression suite on every Claude Code release, tmux is the right substrate.
+- **SSH.** Can't `kitty @` into a remote box you're driving from elsewhere; tmux is fine over SSH.
+- **Multi-operator.** If a second developer wants to attach and watch, tmux's attach-session semantics beat Kitty's window-model.
+
+For a solo operator on one machine running one-off residual tests, none of those constraints bind. The tool I already had won on every axis that mattered _for this job._
+
+## Credits
+
+[Kitty](https://sw.kovidgoyal.net/kitty/remote-control/) by Kovid Goyal — the actual substrate, with remote-control docs that didn't lie. The tmux orchestration ecosystem above — I didn't use it, but copying its primitive set saved me the design work. Sebastián Ramírez's [FastAPI workflow patterns](https://github.com/tiangolo/fastapi/tree/master/.github/workflows) — label-driven audit logs are the next thing I'm borrowing, for the `audit-mcp-server` skill itself.
+
+## Try it
+
+The harness + argv-logging probe lives in the monorepo I'm building the memo in:
+
+```bash
+git clone https://github.com/nalediym/ai-engineer-april-26 && cd ai-engineer-april-26
+cd experiments/devops-empirical/harness
+./test-primitives.sh      # bash subprocess; zero credits
+./run-w3a.sh --verify     # probe logs its argv; zero credits
+./run-w3a.sh              # drives a real Claude Code session; ~$0.05
+```
+
+The memo this is scaffolding for is `devops-for-skill-building.md` at the repo root; the PRD it enables is `experiments/09-audit-mcp-server/PRD.md`. Both are honest about what's in scope (single-operator GitOps for MCP iteration) and what isn't (multi-operator coordination, SLIs for tool-selection, Gatekeeper-style versioned tool names inside one server — all named non-goals, because the pattern is a stopgap and the primitives that obsolete it are worth calling by name).
+
+The thing I'll keep from this week: when the 2026-SOTA answer asks you to install four tools, check what you already have. Sometimes the harness is the terminal.
