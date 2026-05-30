@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>freax — the autumn it stopped being a terminal emulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0908;
+    --paper:#ede0cf;
+    --paper-dim:#bcae9a;
+    --amber:#e8801f;
+    --amber-hot:#ffb454;
+    --rust:#a8431a;
+    --phosphor:#d7a85a;
+    --line:#2a241c;
+    --green:#7fae6b;
+    --serif:'Spectral',Georgia,serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--serif);
+    font-size:19px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  /* CRT grain + scanline atmosphere */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,.20) 3px,rgba(0,0,0,0) 4px);
+    mix-blend-mode:multiply;opacity:.45;
+  }
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:8;
+    background:radial-gradient(120% 120% at 50% 0%,rgba(232,128,31,.07),transparent 55%),
+               radial-gradient(140% 100% at 50% 100%,rgba(0,0,0,.6),transparent 60%);
+  }
+
+  .wrap{max-width:760px;margin:0 auto;padding:0 26px}
+
+  /* ---------- masthead ---------- */
+  header{
+    border-bottom:1px solid var(--line);
+    padding:64px 0 30px;margin-bottom:54px;position:relative;
+  }
+  .kicker{
+    font-family:var(--mono);font-size:11px;letter-spacing:.34em;text-transform:uppercase;
+    color:var(--amber);margin-bottom:26px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+  }
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber-hot);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  h1{
+    font-family:var(--serif);font-weight:300;font-size:clamp(40px,8vw,72px);
+    line-height:.98;letter-spacing:-.02em;margin-bottom:8px;color:var(--paper);
+  }
+  h1 em{font-style:italic;color:var(--amber-hot)}
+  h1 .strike{position:relative;color:var(--paper-dim)}
+  h1 .strike::after{content:"";position:absolute;left:-2%;top:54%;width:104%;height:3px;background:var(--rust);transform:rotate(-1.5deg)}
+  .sub{font-family:var(--serif);font-style:italic;color:var(--paper-dim);font-size:21px;margin-top:18px;max-width:56ch}
+  .byline{
+    font-family:var(--mono);font-size:12px;color:var(--paper-dim);margin-top:30px;
+    display:flex;gap:18px;flex-wrap:wrap;letter-spacing:.04em;
+  }
+  .byline b{color:var(--phosphor);font-weight:500}
+
+  /* ---------- prose ---------- */
+  .scene{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--rust);margin:60px 0 8px;display:flex;align-items:center;gap:12px}
+  .scene::before{content:"";height:1px;width:34px;background:var(--rust)}
+  p{margin:0 0 22px}
+  .lead::first-letter{
+    font-family:var(--serif);font-weight:300;float:left;font-size:78px;line-height:.72;
+    padding:8px 12px 0 0;color:var(--amber);
+  }
+  em{color:var(--phosphor)}
+  .ws{color:var(--amber-hot);font-style:normal;font-weight:500}
+
+  /* ---------- terminal ---------- */
+  .term{
+    font-family:var(--mono);font-size:13.5px;line-height:1.62;
+    background:#070605;border:1px solid var(--line);border-radius:7px;
+    margin:30px 0;overflow:hidden;
+    box-shadow:0 0 0 1px rgba(232,128,31,.06),0 28px 60px -30px rgba(0,0,0,.9),inset 0 0 60px rgba(232,128,31,.025);
+  }
+  .term .bar{
+    background:linear-gradient(180deg,#1a1612,#100d0a);border-bottom:1px solid var(--line);
+    padding:9px 14px;display:flex;align-items:center;gap:8px;
+  }
+  .term .bar .lights{display:flex;gap:7px}
+  .term .bar .lights i{width:11px;height:11px;border-radius:50%;display:block}
+  .term .bar .lights i:nth-child(1){background:#7a2d1a}
+  .term .bar .lights i:nth-child(2){background:#7a5a1a}
+  .term .bar .lights i:nth-child(3){background:#3f5a2a}
+  .term .bar .ttl{color:var(--paper-dim);font-size:11px;letter-spacing:.08em;margin-left:8px}
+  .term .body{padding:18px 18px 20px;color:var(--phosphor);white-space:pre;overflow-x:auto;text-shadow:0 0 7px rgba(215,168,90,.28)}
+  .term .body::-webkit-scrollbar{height:8px}
+  .term .body::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+  .prompt{color:var(--green)}
+  .cmd{color:var(--paper)}
+  .cmt{color:#6f6555;font-style:italic}
+  .out{color:var(--phosphor)}
+  .kw{color:var(--amber-hot)}
+  .reg{color:#d98a4e}
+  .num{color:#9ac77e}
+  .str{color:#caa86a}
+  .err{color:var(--rust)}
+  .cursor{display:inline-block;width:8px;height:15px;background:var(--amber-hot);vertical-align:-2px;animation:blink 1.05s steps(1) infinite;box-shadow:0 0 8px var(--amber-hot)}
+  @keyframes blink{50%{opacity:0}}
+
+  .cap{font-family:var(--mono);font-size:11px;color:var(--paper-dim);margin:-18px 0 30px;letter-spacing:.03em;border-left:2px solid var(--line);padding-left:12px}
+
+  blockquote{
+    border-left:2px solid var(--amber);margin:34px 0;padding:4px 0 4px 24px;
+    font-style:italic;color:var(--phosphor);font-size:22px;line-height:1.5;
+  }
+
+  /* ---------- historical note ---------- */
+  .note{
+    border:1px solid var(--line);border-radius:7px;margin:60px 0 30px;padding:28px 30px;
+    background:linear-gradient(180deg,rgba(232,128,31,.04),transparent);
+  }
+  .note h3{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--amber);margin-bottom:16px}
+  .note p{font-size:16px;line-height:1.66;color:var(--paper-dim)}
+  .note p:last-child{margin-bottom:0}
+  .note b{color:var(--phosphor);font-weight:500}
+  .note .true{color:var(--green);font-family:var(--mono);font-size:12px}
+  .note .fic{color:var(--rust);font-family:var(--mono);font-size:12px}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:34px 0 90px;font-family:var(--mono);font-size:11px;color:var(--paper-dim);letter-spacing:.06em;line-height:2}
+  footer a{color:var(--amber)}
+
+  ::selection{background:var(--amber);color:var(--ink)}
+  a{color:var(--amber-hot)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker"><span class="dot"></span> dispatches from the substrate · no. 04 · helsinki</div>
+    <h1>It was supposed<br>to be a <span class="strike">terminal</span><br><em>emulator</em>.</h1>
+    <p class="sub">A short fiction about the eleven weeks in 1991 when a 386 bought to run Prince of Persia quietly turned into an operating system — and nobody, least of all the author, noticed in time to stop it.</p>
+    <div class="byline">
+      <span>filed under <b>HISTORICAL_FICTION</b></span>
+      <span>accuracy mode: <b>mr_robot</b></span>
+      <span>est. read <b>9 min</b></span>
+    </div>
+  </header>
+
+  <p class="lead">The modem was the whole problem, really. The university kept a MicroVAX humming somewhere in the basement of the computer-science building, and the only way to reach its Unix from the apartment on Petersgatan was to dial in over a 2400-baud line and let some piece of software pretend to be a terminal. MINIX shipped with one. It was fine. <em>Fine</em> was the word that had started to itch.</p>
+
+  <p>He had bought the machine in January — an Intel 80386, 33 megahertz, four megabytes of RAM, a forty-megabyte disk, partly on the honest pretext of coursework and partly so he could play <em>Prince of Persia</em> without the borrowed Sinclair choking on it. By autumn the games were installed and ignored. What he kept coming back to was the chip's manual, and one specific thing the 386 could do that the 286 in everyone else's machine could not: it could be told, in hardware, to run two things at once and switch between them so fast it looked like both.</p>
+
+  <p>So the terminal emulator was never the point. The terminal emulator was the <em>excuse</em>.</p>
+
+  <div class="scene">scene one · two letters</div>
+
+  <p>He wrote it bare-metal. Not as a MINIX program — that would have been the sane thing, and it would have taught him nothing about the chip. He wrote two independent tasks. One did nothing but write the letter <span class="ws">A</span> to the screen, forever. The other wrote <span class="ws">B</span>. The 386's task gate would flip between them on the timer interrupt, and if he'd wired the descriptor tables correctly, the screen would fill with proof.</p>
+
+  <p>The screen in text mode was just memory. Address <span class="ws">0xB8000</span>. Two bytes per cell — character, then attribute. You didn't <em>print</em> to it. You wrote bytes into it, like writing to any other address, and the CRT controller did the rest. He liked that. No abstraction lying to him about what was underneath.</p>
+
+  <div class="term">
+    <div class="bar"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">386 · real → protected mode · tasks A/B</span></div>
+    <div class="body"><span class="cmt">; task A — write 'A' at the top-left cell of text video memory</span>
+<span class="cmt">; segment 0xB800 in real-mode terms; physical 0xB8000</span>
+        <span class="kw">mov</span>     <span class="reg">ax</span>, <span class="num">0xB800</span>
+        <span class="kw">mov</span>     <span class="reg">es</span>, <span class="reg">ax</span>
+        <span class="kw">mov</span>     <span class="kw">byte</span> <span class="reg">[es:0]</span>, <span class="str">'A'</span>      <span class="cmt">; the character</span>
+        <span class="kw">mov</span>     <span class="kw">byte</span> <span class="reg">[es:1]</span>, <span class="num">0x07</span>     <span class="cmt">; grey on black</span>
+.loop:  <span class="kw">jmp</span>     .loop                <span class="cmt">; spin. the timer will yank us out.</span>
+
+<span class="cmt">; the trick is in the IDT: the timer IRQ (vector 0x08) is a TASK gate,</span>
+<span class="cmt">; not an interrupt gate. so the CPU does a full hardware task switch —</span>
+<span class="cmt">; it dumps every register into task A's TSS and loads task B's. for free.</span>
+        <span class="kw">ltr</span>     <span class="reg">ax</span>                   <span class="cmt">; load task register, point it at the TSS</span></div>
+  </div>
+  <p class="cap">Real mechanism. The 386 could switch tasks in hardware via the Task State Segment — exactly the chip-specific feature that made the kernel fast, non-portable, and, later, controversial.</p>
+
+  <p>He ran it. The screen did this:</p>
+
+  <div class="term">
+    <div class="bar"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">/dev/console</span></div>
+    <div class="body"><span class="out">AAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBB</span>
+<span class="out">BBBBBBBBBBBBBBBBBBBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</span>
+<span class="out">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBB</span></div>
+  </div>
+
+  <p>That ragged seam where the <span class="ws">A</span>s gave way to <span class="ws">B</span>s — that was the timer interrupt firing, the chip stuffing one task's whole soul into a TSS and loading another's. That was <em>multitasking</em>, in the apartment, on a machine that had no business doing it yet. He sat with it for a long time. There is a particular silence that follows the moment a thing you only half-believed would work, works.</p>
+
+  <blockquote>It is not that he decided to write an operating system. It is that he kept needing one more thing, and each thing he needed was the next layer down.</blockquote>
+
+  <div class="scene">scene two · the slide</div>
+
+  <p>Two tasks writing letters is a toy. But to actually <em>use</em> it as a terminal — to dial the VAX and download files while connected — he needed to read and write the serial port himself. The 8250 UART, ports <span class="ws">0x3F8</span> and up. <span class="kw">in</span> and <span class="kw">out</span> instructions. Fine. He wrote a driver.</p>
+
+  <p>Then he wanted to <em>keep</em> the files he downloaded. Which meant writing them to disk. Which meant a disk driver — the AT hard-disk controller, registers at <span class="ws">0x1F0</span>. Fine. He wrote that too. And once bytes were landing on the platter, they had to land <em>somewhere structured</em>, which meant a filesystem. He could have invented one. Instead he made his read and write the <em>MINIX</em> filesystem — same inode layout, same block bitmap — so the files would still be there, still readable, when he booted back into MINIX to compile the next version.</p>
+
+  <p>He stopped one evening and counted what he had: a thing that booted itself, switched between processes, talked to the serial line, drove the disk, and understood a filesystem. Somewhere in the slide from <em>A and B</em> to <em>here</em>, the terminal emulator had quietly died and been replaced by something with no name and every organ of an operating system.</p>
+
+  <div class="term">
+    <div class="bar"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">minix shell — building the thing that will replace minix</span></div>
+    <div class="body"><span class="cmt"># bootsector is 8086-clean, so it goes through as86/ld86,</span>
+<span class="cmt"># not gas. bruce evans' toolchain. 512 bytes, ends in 0xAA55.</span>
+<span class="prompt">$</span> <span class="cmd">as86 -0 -a -o boot/bootsect.o boot/bootsect.s</span>
+<span class="prompt">$</span> <span class="cmd">ld86 -0 -s -o boot/bootsect boot/bootsect.o</span>
+
+<span class="cmt"># the rest is C, compiled with gcc ported onto minix.</span>
+<span class="cmt"># -O because it has to be small. -fstrength-reduce because</span>
+<span class="cmt"># every cycle on a 33MHz box is a cycle you actually feel.</span>
+<span class="prompt">$</span> <span class="cmd">gcc -O -Wall -fstrength-reduce -fomit-frame-pointer \</span>
+<span class="cmd">      -fcombine-regs -mstring-insns -c -o kernel/sched.o kernel/sched.c</span>
+
+<span class="prompt">$</span> <span class="cmd">ls -F</span>
+<span class="out">boot/   fs/   include/   kernel/   lib/   mm/   Makefile   README</span>
+
+<span class="prompt">$</span> <span class="cmd">wc -l kernel/*.c fs/*.c mm/*.c | tail -1</span>
+<span class="out">  10239 total</span>
+<span class="cursor"></span></div>
+  </div>
+  <p class="cap">All real: the boot sector went through <span class="ws">as86</span>/<span class="ws">ld86</span> while the kernel proper was C through <span class="ws">gcc</span>, and the whole thing was bootstrapped <em>inside</em> MINIX — the OS it was about to make obsolete on his own machine.</p>
+
+  <div class="scene">scene three · the post</div>
+
+  <p>It compiled. It booted off a floppy. It could not do very much — no networking, you needed MINIX just to build it, and it ran on the 386 and nothing else on Earth. He thought it was a hobby. He thought it would stay small. He sat down at the MicroVAX session one night in late August and opened a newsreader, and posted to <em>comp.os.minix</em> the most consequentially wrong prediction in the history of the field: that it was <span class="ws">"just a hobby, won't be big and professional like gnu."</span></p>
+
+  <div class="term">
+    <div class="bar"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">rn — comp.os.minix — 25 Aug 1991</span></div>
+    <div class="body"><span class="out">Newsgroups:</span> <span class="str">comp.os.minix</span>
+<span class="out">Subject:</span> <span class="str">What would you like to see most in minix?</span>
+<span class="out">Summary:</span> <span class="str">small poll for my new operating system</span>
+
+<span class="cmt">Hello everybody — he tells them it's a free OS, a hobby,</span>
+<span class="cmt">nothing on the scale of GNU. He tells them it will only</span>
+<span class="cmt">ever run on the 386, because he uses the chip's own task</span>
+<span class="cmt">switching and there is nothing portable about it. He asks</span>
+<span class="cmt">what features people would want. He is, he writes, doing</span>
+<span class="cmt">this for fun, and it will probably never support anything</span>
+<span class="cmt">but AT-class disks, because that is all he has.</span>
+
+<span class="prompt">--</span>
+<span class="out">Linus Torvalds</span>  <span class="str">torvalds@kruuna.helsinki.fi</span></div>
+  </div>
+  <p class="cap">Paraphrased from the real Usenet post of 25 August 1991 — including the genuinely-made claims that it would be 386-only and AT-disk-only. Both turned out to be hilariously temporary.</p>
+
+  <p>He wanted to call it <em>Freax</em> — free, plus freak, plus the obligatory <em>x</em>. He thought that was the name. But when he uploaded the source for version 0.01 to the university FTP server, the administrator who gave him the directory — Ari Lemmke — quietly disliked <em>Freax</em>, and named the folder after the author instead.</p>
+
+  <div class="term">
+    <div class="bar"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">ftp.funet.fi — /pub/OS/</span></div>
+    <div class="body"><span class="prompt">ftp&gt;</span> <span class="cmd">cd /pub/OS</span>
+<span class="prompt">ftp&gt;</span> <span class="cmd">ls</span>
+<span class="out">drwxr-xr-x   minix/</span>
+<span class="out">drwxr-xr-x   </span><span class="err">linux/</span><span class="out">          </span><span class="cmt"># &lt;- he had wanted to call it 'freax'.</span>
+<span class="prompt">ftp&gt;</span> <span class="cmd">cd linux</span>
+<span class="prompt">ftp&gt;</span> <span class="cmd">put linux-0.01.tar.gz</span>
+<span class="out">226 Transfer complete.</span>
+<span class="out">73091 bytes sent</span>
+<span class="cursor"></span></div>
+  </div>
+
+  <p>And so the most-deployed piece of software in human history — the thing that would one day run the phones, the servers, the rovers, the markets, the routers between you and this page — was named by accident, by a sysadmin with a directory to fill and an opinion about a bad pun. The author kept calling it Freax for a while. Nobody listened. The folder won.</p>
+
+  <blockquote>The 386-only decision was a confession of laziness that became the architecture. The name was a vetoed pun. The whole thing was a terminal emulator. None of it was supposed to matter.</blockquote>
+
+  <div class="note">
+    <h3>where the fiction stops</h3>
+    <p><span class="true">FACT —</span> Torvalds bought a <b>33MHz 386 with 4MB RAM</b> in early 1991, partly to play games. He wrote a bare-metal terminal emulator to dial into the university's Unix, and the <b>A/B task-switching experiment</b> using the 386's hardware <b>TSS</b> is the real origin moment. Needing to download and store files drove him to write a disk driver and a <b>MINIX-compatible filesystem</b>, at which point it had become an OS.</p>
+    <p><span class="true">FACT —</span> The boot sector really was built with Bruce Evans' <b>as86/ld86</b>; the kernel was C through <b>gcc</b>, bootstrapped under MINIX. The <b>25 Aug 1991</b> post to <b>comp.os.minix</b> really did call it "just a hobby" and really did claim it would stay 386-only and AT-disk-only. He wanted to name it <b>Freax</b>; <b>Ari Lemmke</b> named the FTP directory <b>linux</b> and it stuck. Version <b>0.01</b> shipped to <b>ftp.funet.fi</b> in September 1991.</p>
+    <p><span class="fic">FICTION —</span> The interior monologue, the apartment on Petersgatan, the "long silence," the exact terminal transcripts and byte counts. The mechanisms are accurate; the scenes around them are invented. (Petersgatan is plausible Helsinki, not a documented address — treat it as set dressing.)</p>
+  </div>
+
+  <footer>
+    DISPATCHES FROM THE SUBSTRATE — historical fiction, real silicon.<br>
+    Sources behind the facts: Torvalds &amp; Diamond, <em>Just for Fun</em> (2001) · the archived comp.os.minix thread · the linux-0.01 source tree.<br>
+    Every command, register, and address in this piece is real. The feelings are guesses.
+  </footer>
+
+</div>
+</body>
+</html>
