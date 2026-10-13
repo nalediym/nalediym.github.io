@@ -1,0 +1,214 @@
+---
+title: "Motion Studio from scratch: pixels to \"make me an intro\""
+description: "Claude Motion Studio turns Claude Code into a motion designer. I rebuilt it Nand2Tetris-style, one layer at a time, from a single pixel up to an agent that writes and renders video on its own — with a live engine you can scrub."
+publishedAt: 2026-10-12
+tags: [remotion, claude-code, motion-graphics, animation, from-scratch, learning]
+---
+
+_A video is just a function of time. Everything else is layers on top._
+
+[Claude Motion Studio](https://github.com/MoussaabBadla/claude-motion-studio) is a small open-source repo by Moussaab Badla (MIT, not an Anthropic product). You open it in Claude Code, say _"make a 10-second kinetic intro for Nova"_, and Claude designs the animation, writes the code, checks its own frames, and renders an MP4. No After Effects. No timeline scrubbing.
+
+I didn't want to just use it. I wanted to know what's underneath. So I did what Nand2Tetris taught me: start from the smallest piece, add exactly one idea per layer, and only build each layer out of the ones below it.
+
+**[▶ Open the interactive version](/motion-studio-from-scratch.html)** — a live player running a 5-second intro on ~80 lines of JavaScript, a frame scrubber, an ASCII mode, a clamp demo, and a glossary with line-by-line links into the original repo.
+
+Here's the stack:
+
+```text
+┌────────────────────────────────────────────────────────┐
+│  YOU              "make a 10s intro for Nova"          │
+╞════════════════════════════════════════════════════════╡
+│  7  Orchestrator  CLAUDE.md: idea→style→build→render   │
+│  6  Skills        SKILL.md ×2: taste + mechanics       │
+│  5  Renderer      loop frames → PNGs → MP4             │
+│  4  Compositions  layers + sequences on a timeline     │
+│  3  Spring        physics-based motion                 │
+│  2  Interpolate   map frames → values, with easing     │
+│  1  Frame = f(n)  a picture is a function of time      │
+│  0  Pixels        a picture is a grid of colors        │
+└────────────────────────────────────────────────────────┘
+```
+
+## The problems it solves
+
+1. **Motion graphics live in timelines.** Changing a headline in After Effects means re-dragging keyframes. [Remotion](https://www.remotion.dev/docs) makes video out of React code instead: change one number, re-render.
+2. **Code-video needs a developer.** Remotion expects you to know React. Claude Code on top means you describe the video and Claude writes the React.
+3. **AI-written motion looks cheap.** Claude can write Remotion that _runs_ but feels flat: linear easing, slideshow cuts. Two skills fix that: one for taste, one for mechanics.
+4. **Re-deriving timing every time.** [`primitives.tsx`](https://github.com/MoussaabBadla/claude-motion-studio/blob/01e982454f9f134cdb4fc57b670c813a7fc2b5ec/src/lib/primitives.tsx) packages the good moves so nobody starts from zero.
+
+## Layer 0–1: a frame is a function of time
+
+A frame is a grid of pixels. Video is frames shown fast, usually 30 a second. The naive approach stores every frame. The Remotion approach stores a **function**: give it frame `n`, it returns the picture.
+
+```text
+   n = 0       n = 1       n = 2       n = 3
+  ┌──────┐    ┌──────┐    ┌──────┐    ┌──────┐
+  │●     │    │  ●   │    │    ● │    │     ●│     draw(n) puts the
+  └──────┘    └──────┘    └──────┘    └──────┘     dot at x = 10 + 4n
+```
+
+```js
+function draw(ctx, n) {
+  ctx.clearRect(0, 0, 640, 360);
+  ctx.fillRect(10 + n * 4, 170, 20, 20);   // position depends only on n
+}
+```
+
+Because the picture depends **only** on `n`, you can jump to any frame, render frames in parallel, and get identical output every time. That's determinism, and it's why the repo ships a seeded RNG, [`mulberry32`](https://github.com/MoussaabBadla/claude-motion-studio/blob/01e982454f9f134cdb4fc57b670c813a7fc2b5ec/src/lib/primitives.tsx#L78-L86): `Math.random()` inside a frame makes particles flicker. In real Remotion, `n` comes from [`useCurrentFrame()`](https://www.remotion.dev/docs/use-current-frame).
+
+## Layer 2: interpolate, easing, and clamp
+
+`interpolate` says "between frame 30 and 55, go from 0 to 260." An easing bends the line so motion starts fast and lands softly.
+
+```js
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+
+function interpolate(frame, [f0, f1], [v0, v1], ease = t => t) {
+  const t = clamp((frame - f0) / (f1 - f0), 0, 1);   // 0..1 progress
+  return v0 + (v1 - v0) * ease(t);
+}
+
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+```
+
+**Clamp** pins a value inside a range: `clamp(300, 0, 260)` is `260`. Without it, the math keeps going past frame 55 and your title flies off screen. Here's the detail that surprised me: **Remotion's [`interpolate`](https://www.remotion.dev/docs/interpolate) does not clamp by default** — it extends. That's exactly why the repo defines a reusable clamp option on [line 13 of `primitives.tsx`](https://github.com/MoussaabBadla/claude-motion-studio/blob/01e982454f9f134cdb4fc57b670c813a7fc2b5ec/src/lib/primitives.tsx#L13), and why its [`CLAUDE.md` says "always clamp"](https://github.com/MoussaabBadla/claude-motion-studio/blob/01e982454f9f134cdb4fc57b670c813a7fc2b5ec/CLAUDE.md#L20).
+
+```text
+ value
+  260 ┤                 ╭━━━━━━━━━━━  clamp: holds at 260
+      │             ╭───╯
+      │         ╭───╯        easeOut: quick start, gentle landing
+      │    ╭─╯
+    0 ┼━━━━╯  clamp: holds at 0
+      └────┬────────────┬──────────► frame
+           30           55
+```
+
+The repo's own easing, `APPLE`, is a cubic Bézier `(0.16, 1, 0.3, 1)` — [play with it here](https://cubic-bezier.com/#.16,1,.3,1).
+
+## Layer 3: spring
+
+Curves are drawn; springs are simulated. Pull a weight toward 1, slow it with friction, step once per frame:
+
+```js
+function spring(frame, fps, { stiffness = 100, damping = 10, mass = 1 } = {}) {
+  let x = 0, v = 0;
+  const dt = 1 / fps;
+  for (let i = 0; i < frame; i++) {
+    const force = -stiffness * (x - 1) - damping * v;
+    v += (force / mass) * dt;
+    x += v * dt;
+  }
+  return x;
+}
+```
+
+Low damping overshoots and wobbles. Fun fact: the repo's skill [recommends `spring`](https://github.com/MoussaabBadla/claude-motion-studio/blob/01e982454f9f134cdb4fc57b670c813a7fc2b5ec/.claude/skills/remotion-motion/SKILL.md?plain=1#L65-L66), but none of the three example videos actually call it. They get their feel from the `APPLE` curve.
+
+## Layer 4: compositions and sequences
+
+A **composition** is a video's spec: size, fps, length, and a stack of layers. A **sequence** shows a layer only between two frames and hands it a local clock starting at 0. Layers paint bottom to top, like cels on an animation stand.
+
+```text
+ frame   0        30    50                    130   150
+         ├────────┼─────┼──────────────────────┼─────┤
+ bg      ██████████████████████████████████████████████
+ title   ██████████████████████████████████████████████  letters spring up
+ line             ████████████████████████████████████  grows with easeOut
+ sub                    ██████████████████████████████  fades + slides
+ fade                                          ███████  to black
+```
+
+```js
+function sequence(from, duration, draw) {
+  return (ctx, frame, comp) => {
+    if (frame >= from && frame < from + duration) draw(ctx, frame - from, comp);
+  };
+}
+```
+
+The repo skips Remotion's `<Sequence>` and writes its own [`Scene`](https://github.com/MoussaabBadla/claude-motion-studio/blob/01e982454f9f134cdb4fc57b670c813a7fc2b5ec/src/lib/primitives.tsx#L38-L56). Line 48 is the same "only between two frames" check; lines 49–54 add a camera that pushes in, drifts, then zooms _through_ into the next scene instead of cutting.
+
+## Layer 5: the renderer
+
+A player calls `renderFrame` 30 times a second. An exporter calls it once per frame as fast as it can and hands the pile to ffmpeg:
+
+```text
+for n in 0..149:  renderFrame(n) ──► frame_n.png ──┐
+                                                    ├──► ffmpeg ──► out.mp4
+real Remotion: headless Chromium screenshots each frame of your React page.
+```
+
+```bash
+npx remotion still  KineticIntro out/f.png --frame=150   # QA one frame
+npx remotion render KineticIntro out/intro.mp4           # every frame → MP4
+```
+
+`still` matters more than it looks. It's how Claude _sees_ its own work in layer 7.
+
+## Layer 6: skills
+
+Everything so far is a video engine — no AI anywhere. A [skill](https://code.claude.com/docs/en/skills) is a folder with a `SKILL.md`: Markdown plus a short frontmatter. Claude Code always sees the name and description; the body loads only when a request matches.
+
+```text
+ session starts                    you ask for a video
+ ┌───────────────────────┐         ┌──────────────────────────────┐
+ │ Claude sees only:     │         │ description matches          │
+ │  motion-design: ...   │  ────►  │ → reads the whole SKILL.md   │
+ │  remotion-motion: ... │         │ → follows it while coding    │
+ └───────────────────────┘         └──────────────────────────────┘
+```
+
+Motion Studio ships two: [`motion-design`](https://github.com/MoussaabBadla/claude-motion-studio/blob/01e982454f9f134cdb4fc57b670c813a7fc2b5ec/.claude/skills/motion-design/SKILL.md?plain=1) (taste: color, type, 8pt grid, layered shadows, a nine-point "make it premium" checklist) and [`remotion-motion`](https://github.com/MoussaabBadla/claude-motion-studio/blob/01e982454f9f134cdb4fc57b670c813a7fc2b5ec/.claude/skills/remotion-motion/SKILL.md?plain=1) (mechanics: the workflow, the toolkit, render commands, gotchas).
+
+## Layer 7: the orchestrator
+
+[`CLAUDE.md`](https://github.com/MoussaabBadla/claude-motion-studio/blob/01e982454f9f134cdb4fc57b670c813a7fc2b5ec/CLAUDE.md) loads at the start of every session in the repo. It defines the loop:
+
+```text
+  you: "10s kinetic intro for Nova, 9:16"
+        │
+        ▼
+  Claude Code ──reads──► CLAUDE.md, SKILL.md ×2, primitives.tsx
+        │ 1 IDEA   audience? length? one core message?
+        │ 2 STYLE  palette + type + mood, waits for OK
+        │ 3 BUILD  writes src/compositions/NovaIntro.tsx
+        ▼
+  4 RENDER  remotion still ──► look at PNG ──► problem? ──► fix ─┐
+                 ▲                                               │
+                 └───────────────────────────────────────────────┘
+            remotion render ──► out/nova.mp4
+```
+
+That's the whole trick: an agent loop that writes code, renders one frame, _looks at it_, and fixes what it sees.
+
+## Try it
+
+Run the engine in your terminal — a ball springs and slides in ASCII, layers 0–5 in ~40 lines of Python ([full script in the interactive version](/motion-studio-from-scratch.html)):
+
+```python
+def clamp(x, lo, hi): return max(lo, min(hi, x))
+
+def interpolate(frame, f_range, v_range, ease=lambda t: t):
+    (f0, f1), (v0, v1) = f_range, v_range
+    t = clamp((frame - f0) / (f1 - f0), 0, 1)
+    return v0 + (v1 - v0) * ease(t)
+```
+
+Or use the real thing:
+
+```bash
+git clone https://github.com/MoussaabBadla/claude-motion-studio && cd claude-motion-studio
+npm install            # Node 22+
+npm run dev            # preview at http://localhost:3000
+```
+
+Then open the folder in the Claude desktop app's Code tab and ask for a video.
+
+## Credits
+
+- [Claude Motion Studio](https://github.com/MoussaabBadla/claude-motion-studio) by Moussaab Badla — the repo this post takes apart.
+- [Remotion](https://www.remotion.dev/) — React → video, and the `interpolate` / `spring` this engine re-derives.
+- [Claude Code skills](https://code.claude.com/docs/en/skills) and [CLAUDE.md](https://code.claude.com/docs/en/memory) docs.
+- [Nand2Tetris](https://www.nand2tetris.org/) — for teaching me to build things one layer at a time.
