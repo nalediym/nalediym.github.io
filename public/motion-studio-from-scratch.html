@@ -342,13 +342,13 @@ h1 { font-size: clamp(16px, 5vw, 40px); }</code></pre>
   screenshots it, repeats. It bundles its own Chromium + ffmpeg.
 </pre>
 <pre><code>// browser player loop (what drives the demo above)
-let frame = 0, last = performance.now();
+// derive the frame from total elapsed time, so playback stays at
+// 30 fps on any screen (60 Hz, 75 Hz, 120 Hz) and catches up after lag
+const start = performance.now();
+let frame = -1;
 function tick(now) {
-  if (now - last &gt;= 1000 / comp.fps) {
-    frame = (frame + 1) % comp.durationInFrames;
-    renderFrame(ctx, comp, frame);
-    last = now;
-  }
+  const n = Math.floor(((now - start) / 1000) * comp.fps) % comp.durationInFrames;
+  if (n !== frame) { frame = n; renderFrame(ctx, comp, frame); }
   requestAnimationFrame(tick);
 }
 
@@ -767,7 +767,7 @@ const nova = {
   const small = document.createElement("canvas"); small.width = COLS; small.height = ROWS;
   const sctx = small.getContext("2d", { willReadFrequently: true });
 
-  let frame = 45, playing = false, asciiMode = false, last = 0;
+  let frame = 45, playing = false, asciiMode = false, startT = 0, startF = 0;
 
   function paint() {
     if (asciiMode) {
@@ -794,20 +794,19 @@ const nova = {
 
   function tick(now) {
     if (!playing) return;
-    if (now - last >= 1000 / comp.fps) {
-      frame = (frame + 1) % comp.durationInFrames;
-      last = now;
-      paint();
-    }
+    // frame comes from total elapsed time, not a per-callback step,
+    // so it stays in sync with the timestamp at any refresh rate
+    const n = (startF + Math.floor(((now - startT) / 1000) * comp.fps)) % comp.durationInFrames;
+    if (n !== frame) { frame = n; paint(); }
     requestAnimationFrame(tick);
   }
 
   playBtn.addEventListener("click", () => {
     playing = !playing;
     playBtn.textContent = playing ? "Pause" : "Play";
-    if (playing) { last = performance.now(); requestAnimationFrame(tick); }
+    if (playing) { startT = performance.now(); startF = frame; requestAnimationFrame(tick); }
   });
-  scrub.addEventListener("input", () => { frame = +scrub.value; paint(); });
+  scrub.addEventListener("input", () => { frame = +scrub.value; startT = performance.now(); startF = frame; paint(); });
   function setMode(a) {
     asciiMode = a;
     stage.hidden = a; asciiOut.hidden = !a;
